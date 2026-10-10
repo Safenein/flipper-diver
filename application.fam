@@ -5,7 +5,7 @@ App(
     name="Flipper Diver",
     apptype=FlipperAppType.EXTERNAL,
     entry_point="flipper_diver_app",
-    stack_size=2 * 1024,
+    stack_size=4 * 1024,  # the main thread writes the record (FlipperFormat)
     # C only (the default "*.c*" also matches *.cpython-*.pyc); tests/ is
     # built on the host by `unit-tests`.
     sources=["*.c", "!tests"],
