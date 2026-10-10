@@ -232,7 +232,8 @@ alors le jeu doit se mettre en pause. (D12)
 
 Acceptation :
 - Verrouiller le Flipper en pleine manche puis le déverrouiller → écran de pause,
-  chrono inchangé.
+  chrono inchangé à 250 ms près (délai de détection de la perte de l'écran ;
+  critère assoupli avec l'accord de l'utilisateur le 2026-10-10).
 
 ### Game over et record
 

@@ -167,8 +167,10 @@ de l'écran de manche (en pixels, 128×64) :
   `RoundEnd` et qu'aucun rendu n'a eu lieu depuis plus de 250 ms, l'app appelle
   `game_pause`. **À vérifier sur l'appareil** : si la GUI appelle quand même le
   callback d'un ViewPort masqué, REQ-001-18 sera barrée avec l'accord de
-  l'utilisateur. Limite connue : le chrono continue de tourner pendant les
-  250 ms de détection, donc il n'est inchangé qu'à 250 ms près à la reprise.
+  l'utilisateur. Le chrono tourne encore pendant la détection, ce qu'admet
+  le critère de REQ-001-18 (à 250 ms près) : il n'avance qu'aux ticks où le
+  dernier rendu date de 250 ms au plus, donc il perd au plus 250 ms depuis la
+  perte de l'écran.
 - Mesures (REQ-001-24, 25) : `FLIPPER_DIVER_METRICS` consigne le tas libre au
   début de la partie, puis à chaque fin de manche et au game over l'écart
   maximal entre deux images et la latence maximale entre un appui et son image.
