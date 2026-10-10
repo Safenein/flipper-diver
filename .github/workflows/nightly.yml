@@ -1,0 +1,86 @@
+# Nightly pre-release: each night, if master moved since the last one, the
+# `nightly` release is rebuilt from master with the notes of the unreleased
+# commits. Its tag moves with it, so cliff.toml ignores it.
+name: Nightly
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly
+
+jobs:
+  changes:
+    name: Nouveaux commits ?
+    runs-on: ubuntu-24.04
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/nightly" --jq .object.sha 2>/dev/null || true)
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] || [ "$last" != "$GITHUB_SHA" ]; then
+            echo changed=true >> "$GITHUB_OUTPUT"
+          else
+            echo "master n'a pas bougé depuis le dernier nightly ($last)." >> "$GITHUB_STEP_SUMMARY"
+            echo changed=false >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    needs: changes
+    if: needs.changes.outputs.changed == 'true'
+    uses: ./.github/workflows/build.yml
+
+  publish:
+    name: Publie le nightly
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # git-cliff reads the whole history and the tags
+          persist-credentials: false
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: flipper_diver
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Notes de version
+        env:
+          SDK: ${{ needs.build.outputs.sdk-version }}
+          API: ${{ needs.build.outputs.api-version }}
+        run: |
+          pip install git-cliff==2.14.2
+          {
+            echo "> [!WARNING]"
+            echo "> Build automatique de \`master\` au commit ${GITHUB_SHA::7}, non vérifié sur l'appareil."
+            echo "> Pour une version stable, prendre la [dernière release](https://github.com/$GITHUB_REPOSITORY/releases/latest)."
+            echo
+            echo "🛠️ SDK du firmware officiel $SDK (API $API)."
+            echo
+            git-cliff --unreleased --strip all
+          } > notes.md
+
+      - name: Remplace la pré-release nightly
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete nightly --cleanup-tag --yes || true
+          gh release create nightly flipper_diver.fap \
+            --target "$GITHUB_SHA" \
+            --prerelease --latest=false \
+            --title "🌙 Nightly $(date -u +%F) (${GITHUB_SHA::7})" \
+            --notes-file notes.md

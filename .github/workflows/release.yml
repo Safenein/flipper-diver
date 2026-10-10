@@ -1,0 +1,103 @@
+# Release: on a pushed vX.Y tag matching fap_version in application.fam,
+# builds the FAP and publishes the GitHub release with its git-cliff notes.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Vérifie le tag
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Tag vX.Y égal à fap_version
+        run: |
+          tag=$GITHUB_REF_NAME
+          if ! [[ $tag =~ ^v[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::$tag n'est pas de la forme vX.Y (fap_version n'a que deux nombres)."
+            exit 1
+          fi
+          version=$(sed -n 's/^ *fap_version="\(.*\)".*/\1/p' application.fam)
+          if [ "v$version" != "$tag" ]; then
+            echo "::error::Le tag $tag ne correspond pas à fap_version=\"$version\" dans application.fam."
+            exit 1
+          fi
+
+  build:
+    needs: check
+    uses: ./.github/workflows/build.yml
+
+  publish:
+    name: Publie la release
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # git-cliff reads the whole history and the tags
+          persist-credentials: false
+
+      # On a tag push, actions/checkout fetches the tag as a lightweight one
+      # (actions/checkout#290): fetch the annotated tag again, so that
+      # git-cliff sees its message (without its signature, see cliff.toml).
+      - name: Récupère le tag annoté
+        run: git fetch --force origin "refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME"
+
+      - name: Signature du tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ref=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME")
+          if [ "$(jq -r .object.type <<< "$ref")" != tag ]; then
+            echo "::warning::$GITHUB_REF_NAME est un tag léger : pas de message ni de signature."
+            exit 0
+          fi
+          verified=$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$(jq -r .object.sha <<< "$ref")" \
+            --jq '.verification.verified')
+          if [ "$verified" = true ]; then
+            echo "🔏 Tag $GITHUB_REF_NAME signé et vérifié par GitHub." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning::Le tag $GITHUB_REF_NAME n'est pas signé, ou GitHub ne connaît pas sa clé GPG."
+          fi
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: flipper_diver
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Notes de version
+        env:
+          SDK: ${{ needs.build.outputs.sdk-version }}
+          API: ${{ needs.build.outputs.api-version }}
+        run: |
+          pip install git-cliff==2.14.2
+          {
+            git-cliff --current --strip all
+            echo
+            echo "---"
+            echo
+            echo "🛠️ Construit avec le SDK du firmware officiel $SDK (API $API)."
+            echo "📥 Installation : copier \`flipper_diver.fap\` dans \`apps/Games/\` sur la carte SD."
+          } > notes.md
+
+      - name: Publie la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" flipper_diver.fap \
+            --verify-tag \
+            --title "Flipper Diver $GITHUB_REF_NAME" \
+            --notes-file notes.md
