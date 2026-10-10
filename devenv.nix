@@ -20,9 +20,6 @@
     ];
     runScript = "${ufbtVenv}/bin/ufbt";
   };
-
-  # Furi-free sources linked into every host test (ADR-0004).
-  pureSources = "stratagems.c game.c";
 in {
   languages.c = {
     enable = true;
@@ -46,30 +43,17 @@ in {
     before = ["devenv:enterShell" "devenv:enterTest"];
   };
 
-  packages = [ufbt-fhs];
+  packages = [ufbt-fhs pkgs.git-cliff];
 
   scripts = {
     build.exec = ''ufbt "$@"'';
     launch.exec = ''ufbt launch "$@"'';
     fmt.exec = ''clang-format -i $(git ls-files '*.c' '*.h')'';
-    # Builds and runs each tests/test_*.c on the host, with the warnings ufbt
-    # enables (gnu17 is gcc 12's default there) plus ASan and UBSan.
-    unit-tests.exec = ''
-      set -eu
-      out="$DEVENV_STATE/unit-tests"
-      mkdir -p "$out"
-      cd "$DEVENV_ROOT"
-      status=0
-      for t in tests/test_*.c; do
-        bin="$out/$(basename "$t" .c)"
-        cc -std=gnu17 -Wall -Wextra -Werror -Wdouble-promotion -Wundef \
-          -Wredundant-decls -g -fno-omit-frame-pointer \
-          -fsanitize=address,undefined -fno-sanitize-recover=all \
-          -I. -o "$bin" "$t" ${pureSources}
-        "$bin" || status=1
-      done
-      exit "$status"
-    '';
+    # Same script as the CI (.github/workflows/ci.yml).
+    unit-tests.exec = ''bash "$DEVENV_ROOT/tools/unit-tests.sh" "$DEVENV_STATE/unit-tests"'';
+    # Regenerates CHANGELOG.md (cliff.toml); `changelog --tag v0.2` before
+    # tagging a release names the unreleased commits after it.
+    changelog.exec = ''git-cliff --output "$DEVENV_ROOT/CHANGELOG.md" "$@"'';
   };
 
   git-hooks.hooks.clang-format = {

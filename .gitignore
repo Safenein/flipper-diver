@@ -16,6 +16,9 @@ devenv.local.yaml
 # Python (tools/)
 __pycache__/
 
+# Host test binaries of tools/unit-tests.sh (CI)
+/build/
+
 # ufbt (`ufbt vscode_dist` overwrites this file: restore it with git afterwards)
 dist/
 .ufbt/

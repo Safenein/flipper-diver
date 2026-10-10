@@ -1,0 +1,71 @@
+# git-cliff: CHANGELOG.md and the release notes, from Conventional Commits.
+# https://git-cliff.org/docs/configuration
+#
+# - Groups carry an emoji and an HTML comment that fixes their order (git-cliff
+#   sorts groups by name); the template strips the comment with `striptags`.
+# - A signed tag (`git tag -s`) holds its PGP signature at the end of its
+#   message: the template cuts it off before printing the message.
+# - Only the vX.Y tags are releases: the `nightly` tag moved by the CI is not.
+# - The repository URL is written in the template: a [remote.github] section
+#   would make git-cliff query the GitHub API (rate limits in the CI).
+
+[changelog]
+header = """
+# Journal des modifications
+
+Les évolutions notables de Flipper Diver, générées par [git-cliff](https://git-cliff.org) \
+à partir des messages de commit ([Conventional Commits](https://www.conventionalcommits.org/fr/)).
+"""
+body = """
+{%- macro remote_url() -%}
+  https://github.com/Safenein/flipper-diver
+{%- endmacro -%}
+
+{% if version -%}
+  ## [{{ version | trim_start_matches(pat="v") }}]({{ self::remote_url() }}/releases/tag/{{ version }}) — {{ timestamp | date(format="%Y-%m-%d") }}
+{% else -%}
+  ## 🚧 Non publié
+{% endif -%}
+
+{% if message -%}
+{% set text = message | split(pat="-----BEGIN PGP SIGNATURE-----") | first | trim -%}
+{% if text %}
+{{ text }}
+{% endif -%}
+{% endif -%}
+
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim | upper_first }}
+{% for commit in commits %}
+- {% if commit.scope %}**{{ commit.scope }}** : {% endif %}\
+  {% if commit.breaking %}💥 **rupture** — {% endif %}\
+  {{ commit.message | upper_first }} \
+  ([`{{ commit.id | truncate(length=7, end="") }}`]({{ self::remote_url() }}/commit/{{ commit.id }}))
+{%- endfor %}
+{% endfor %}
+"""
+footer = ""
+# No trim: it would also remove the blank line between two releases.
+trim = false
+
+[git]
+conventional_commits = true
+filter_unconventional = true
+split_commits = false
+protect_breaking_commits = true
+tag_pattern = "^v[0-9]+\\.[0-9]+$"
+sort_commits = "oldest"
+commit_parsers = [
+  { message = "^feat", group = "<!-- 00 -->✨ Nouveautés" },
+  { message = "^fix", group = "<!-- 01 -->🐛 Corrections" },
+  { message = "^perf", group = "<!-- 02 -->⚡ Performances" },
+  { message = "^refactor", group = "<!-- 03 -->♻️ Refactorisation" },
+  { message = "^docs", group = "<!-- 04 -->📝 Documentation" },
+  { message = "^test", group = "<!-- 05 -->🧪 Tests" },
+  { message = "^build", group = "<!-- 06 -->📦 Build" },
+  { message = "^ci", group = "<!-- 07 -->👷 CI" },
+  { message = "^style", group = "<!-- 08 -->🎨 Style" },
+  { message = "^revert", group = "<!-- 09 -->⏪ Retours en arrière" },
+  { message = "^chore\\(release\\)", skip = true },
+  { message = "^chore", group = "<!-- 10 -->🔧 Divers" },
+]
