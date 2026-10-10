@@ -2,7 +2,7 @@
 
 Les évolutions notables de Flipper Diver, générées par [git-cliff](https://git-cliff.org) à partir des messages de commit ([Conventional Commits](https://www.conventionalcommits.org/fr/)).
 
-## 🚧 Non publié
+## [0.1](https://github.com/Safenein/flipper-diver/releases/tag/v0.1) — 2026-10-10
 
 ### ✨ Nouveautés
 
@@ -25,6 +25,8 @@ Les évolutions notables de Flipper Diver, générées par [git-cliff](https://g
 - **view** : Habille le titre et le game over aux couleurs du Flipper ([`c4aa19d`](https://github.com/Safenein/flipper-diver/commit/c4aa19d4ee66cf4622137bf9c002ab795249f55a))
 - **view** : Remplace la bannière par le crâne du logo de Helldivers ([`b7f4a5b`](https://github.com/Safenein/flipper-diver/commit/b7f4a5b93d327b5d5a0f2d121f635ecb1e82a81e))
 - **view** : Reprend l'emblème du logo de Helldivers ([`b6fce0f`](https://github.com/Safenein/flipper-diver/commit/b6fce0f015c3582061d29f07ee6f15ce01b5367d))
+- Donne à l'app une icône tirée de l'emblème ([`ae82dee`](https://github.com/Safenein/flipper-diver/commit/ae82dee480ea18a9489ddb7672b8338ac675427c))
+- **tools** : Capture les écrans du Flipper par RPC USB ([`baedc65`](https://github.com/Safenein/flipper-diver/commit/baedc6549724998530addb79ff3e7e9e6b3977c3))
 
 ### 🐛 Corrections
 
@@ -44,6 +46,8 @@ Les évolutions notables de Flipper Diver, générées par [git-cliff](https://g
 - Synchronise la spec système et CLAUDE.md avec le code ([`89ba0f2`](https://github.com/Safenein/flipper-diver/commit/89ba0f24d9d744ba765e4f55c2117ca9afefa75d))
 - **specs** : Aligne le design des règles du jeu sur le code ([`5523f2e`](https://github.com/Safenein/flipper-diver/commit/5523f2e1dd829e21a6b8574e09976bcffbaa0f28))
 - **specs** : Admet 250 ms d'écart du chrono sur perte de l'écran ([`007bacf`](https://github.com/Safenein/flipper-diver/commit/007bacf5cf3fc7d470505e895bf5e5c16726678f))
+- Décrit l'installation, la CI et les releases ([`86f2b9d`](https://github.com/Safenein/flipper-diver/commit/86f2b9d4953a7b9c32894dc2dbe6211944e4dd73))
+- Montre les écrans du jeu dans le README ([`7a06307`](https://github.com/Safenein/flipper-diver/commit/7a06307e3c6a3811ea6f8d8ee889d1aa7088b191))
 
 ### 🧪 Tests
 
@@ -52,9 +56,16 @@ Les évolutions notables de Flipper Diver, générées par [git-cliff](https://g
 ### 📦 Build
 
 - **devenv** : Ajoute un shell devenv avec ufbt et clang-format ([`b4dec98`](https://github.com/Safenein/flipper-diver/commit/b4dec98b48759df3146a0d5d1761e75370e0a865))
+- Partage les tests sur PC avec la CI et ajoute git-cliff ([`bf9944a`](https://github.com/Safenein/flipper-diver/commit/bf9944a4b133d3361e3bf7c45d086605d4e4c592))
+
+### 👷 CI
+
+- Ajoute la CI, le nightly et les releases taggées ([`63729ec`](https://github.com/Safenein/flipper-diver/commit/63729ecabb64228c47e7a094221b8eadfddcfb24))
+- Borne la durée des jobs du nightly et des releases ([`10c8a72`](https://github.com/Safenein/flipper-diver/commit/10c8a720d839ae893a53a5a9f0fa5f12d10aae21))
 
 ### 🔧 Divers
 
 - Configure clangd pour les tests sur PC ([`599beed`](https://github.com/Safenein/flipper-diver/commit/599beed76d00068a36ebfe7c69a20aec1a32f285))
+- Publie le code sous licence GPL-3.0 ([`ef57d35`](https://github.com/Safenein/flipper-diver/commit/ef57d356d57a5b069885621c98ee7a426a4669a1))
 
 
