@@ -18,6 +18,12 @@ Cible : firmware officiel, canal release (ufbt), en C avec l'API Furi publique.
 - `fmt` — clang-format ; un hook pre-commit le vérifie aussi.
 - `devenv test` — build + vérification du formatage.
 
+## Gestion de versions
+
+Dépôt jj colocalisé avec git : utiliser `jj` (jamais `git add`/`git commit`).
+Les hooks pre-commit de devenv ne tournent pas sur `jj commit` : lancer
+`prek run -a` (ou `fmt`) avant de committer.
+
 ## Pièges
 
 - `ufbt` est un wrapper `buildFHSEnv` (pas de nix-ld sur la machine) autour d'un venv
