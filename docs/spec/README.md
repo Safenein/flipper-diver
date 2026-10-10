@@ -113,6 +113,7 @@ Manifeste : `application.fam` (appid `flipper_diver`, catégorie `Games`).
 | [0001](adr/0001-firmware-officiel-ufbt-c.md) | Firmware officiel, ufbt et C | accepted |
 | [0002](adr/0002-viewport-simple.md) | Un seul ViewPort plutôt qu'un ViewDispatcher | accepted |
 | [0003](adr/0003-ufbt-dans-un-fhs-devenv.md) | ufbt dans un environnement FHS sous devenv | accepted |
+| [0004](adr/0004-regles-pures-testees-sur-pc.md) | Règles du jeu dans un module pur, testé sur PC | accepted |
 
 ## Questions ouvertes
 
