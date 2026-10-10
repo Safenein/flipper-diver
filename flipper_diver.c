@@ -1,99 +1,153 @@
 #include <furi.h>
+#include <furi_hal_random.h>
 #include <gui/gui.h>
 #include <input/input.h>
 
+#include "game.h"
+#include "view.h"
+
 #define TAG "FlipperDiver"
 
-#define INPUT_QUEUE_SIZE 8
+#define EVENT_QUEUE_SIZE 16
+/* 30 Hz, above the 25 Hz of REQ-001-24. */
+#define TICK_PERIOD_MS   33
+
+typedef enum {
+    AppEventTypeInput,
+    AppEventTypeTick,
+} AppEventType;
 
 typedef struct {
-    FuriMutex* mutex; /* protects last_key, read by the GUI thread */
-    InputKey last_key;
-    bool has_key;
-} FlipperDiverState;
+    AppEventType type;
+    InputEvent input;
+} AppEvent;
 
-static const char* flipper_diver_arrow(InputKey key) {
-    switch(key) {
+typedef struct {
+    FuriMessageQueue* queue;
+    FuriTimer* timer;
+    ViewPort* view_port;
+    Gui* gui;
+
+    FuriMutex* mutex; /* protects game, read by the GUI thread */
+    Game game;
+
+    uint32_t last_tick; /* main thread only */
+} App;
+
+static void app_draw_callback(Canvas* canvas, void* ctx) {
+    App* app = ctx;
+    furi_check(furi_mutex_acquire(app->mutex, FuriWaitForever) == FuriStatusOk);
+    view_draw(canvas, &app->game);
+    furi_mutex_release(app->mutex);
+}
+
+static void app_input_callback(InputEvent* input, void* ctx) {
+    App* app = ctx;
+    AppEvent event = {.type = AppEventTypeInput, .input = *input};
+    /* Input thread: never block it, drop the event if the queue is full. */
+    furi_message_queue_put(app->queue, &event, 0);
+}
+
+static void app_timer_callback(void* ctx) {
+    App* app = ctx;
+    AppEvent event = {.type = AppEventTypeTick};
+    /* A dropped tick is harmless: the next one catches up on elapsed time. */
+    furi_message_queue_put(app->queue, &event, 0);
+}
+
+/* Maps an input event to a game key: arrows count on press (REQ-001-5),
+ * Ok and Back on short press. Returns false for events the game ignores. */
+static bool app_game_key(const InputEvent* input, GameKey* key) {
+    switch(input->key) {
     case InputKeyUp:
-        return "Up";
+        *key = GameKeyUp;
+        return input->type == InputTypePress;
     case InputKeyDown:
-        return "Down";
+        *key = GameKeyDown;
+        return input->type == InputTypePress;
     case InputKeyLeft:
-        return "Left";
+        *key = GameKeyLeft;
+        return input->type == InputTypePress;
     case InputKeyRight:
-        return "Right";
+        *key = GameKeyRight;
+        return input->type == InputTypePress;
+    case InputKeyOk:
+        *key = GameKeyOk;
+        return input->type == InputTypeShort;
+    case InputKeyBack:
+        *key = GameKeyBack;
+        return input->type == InputTypeShort;
     default:
-        return input_get_key_name(key);
+        return false;
     }
 }
 
-static void flipper_diver_draw_callback(Canvas* canvas, void* ctx) {
-    FlipperDiverState* state = ctx;
-
-    canvas_clear(canvas);
-    canvas_set_font(canvas, FontPrimary);
-    canvas_draw_str_aligned(canvas, 64, 4, AlignCenter, AlignTop, "Flipper Diver");
-
-    canvas_set_font(canvas, FontSecondary);
-    furi_check(furi_mutex_acquire(state->mutex, FuriWaitForever) == FuriStatusOk);
-    const char* label = state->has_key ? flipper_diver_arrow(state->last_key) : "Press an arrow";
-    canvas_draw_str_aligned(canvas, 64, 32, AlignCenter, AlignCenter, label);
-    furi_mutex_release(state->mutex);
-
-    canvas_draw_str_aligned(canvas, 64, 62, AlignCenter, AlignBottom, "Back to exit");
+/* Time elapsed since the previous call, in ms. */
+static uint32_t app_elapsed_ms(App* app) {
+    uint32_t now = furi_get_tick();
+    uint32_t ticks = now - app->last_tick;
+    app->last_tick = now;
+    return (uint32_t)((uint64_t)ticks * 1000u / furi_kernel_get_tick_frequency());
 }
 
-static void flipper_diver_input_callback(InputEvent* event, void* ctx) {
-    FuriMessageQueue* queue = ctx;
-    /* Called from the input thread: never block it, drop the event if full. */
-    furi_message_queue_put(queue, event, 0);
+static App* app_alloc(void) {
+    App* app = malloc(sizeof(App));
+    app->queue = furi_message_queue_alloc(EVENT_QUEUE_SIZE, sizeof(AppEvent));
+    app->timer = furi_timer_alloc(app_timer_callback, FuriTimerTypePeriodic, app);
+    app->mutex = furi_mutex_alloc(FuriMutexTypeNormal);
+    game_init(&app->game, furi_hal_random_get(), 0, 0);
+
+    app->view_port = view_port_alloc();
+    view_port_draw_callback_set(app->view_port, app_draw_callback, app);
+    view_port_input_callback_set(app->view_port, app_input_callback, app);
+    app->gui = furi_record_open(RECORD_GUI);
+    gui_add_view_port(app->gui, app->view_port, GuiLayerFullscreen);
+
+    app->last_tick = furi_get_tick();
+    furi_timer_start(app->timer, furi_ms_to_ticks(TICK_PERIOD_MS));
+    return app;
+}
+
+static void app_free(App* app) {
+    furi_timer_stop(app->timer);
+    view_port_enabled_set(app->view_port, false);
+    gui_remove_view_port(app->gui, app->view_port);
+    furi_record_close(RECORD_GUI);
+    view_port_free(app->view_port);
+    furi_mutex_free(app->mutex);
+    furi_timer_free(app->timer);
+    furi_message_queue_free(app->queue);
+    free(app);
 }
 
 int32_t flipper_diver_app(void* p) {
     UNUSED(p);
-
-    FlipperDiverState state = {
-        .mutex = furi_mutex_alloc(FuriMutexTypeNormal),
-        .has_key = false,
-    };
-    FuriMessageQueue* queue = furi_message_queue_alloc(INPUT_QUEUE_SIZE, sizeof(InputEvent));
-
-    ViewPort* view_port = view_port_alloc();
-    view_port_draw_callback_set(view_port, flipper_diver_draw_callback, &state);
-    view_port_input_callback_set(view_port, flipper_diver_input_callback, queue);
-
-    Gui* gui = furi_record_open(RECORD_GUI);
-    gui_add_view_port(gui, view_port, GuiLayerFullscreen);
-
+    App* app = app_alloc();
     FURI_LOG_I(TAG, "started");
 
-    InputEvent event;
+    AppEvent event;
     bool running = true;
     while(running) {
-        if(furi_message_queue_get(queue, &event, FuriWaitForever) != FuriStatusOk) {
-            continue;
-        }
-        if(event.type != InputTypeShort) {
-            continue;
-        }
-        if(event.key == InputKeyBack) {
-            running = false;
+        if(furi_message_queue_get(app->queue, &event, FuriWaitForever) != FuriStatusOk) {
             continue;
         }
 
-        furi_check(furi_mutex_acquire(state.mutex, FuriWaitForever) == FuriStatusOk);
-        state.last_key = event.key;
-        state.has_key = true;
-        furi_mutex_release(state.mutex);
-        view_port_update(view_port);
+        furi_check(furi_mutex_acquire(app->mutex, FuriWaitForever) == FuriStatusOk);
+        /* The timer is brought up to date before any key (design.md). */
+        GameEvents events = game_advance(&app->game, app_elapsed_ms(app));
+        GameKey key;
+        if(event.type == AppEventTypeInput && app_game_key(&event.input, &key)) {
+            events |= game_key(&app->game, key);
+        }
+        furi_mutex_release(app->mutex);
+
+        if(events & GameEventQuit) {
+            running = false;
+        }
+        /* Inputs redraw at once rather than on the next tick (REQ-001-24). */
+        view_port_update(app->view_port);
     }
 
-    view_port_enabled_set(view_port, false);
-    gui_remove_view_port(gui, view_port);
-    furi_record_close(RECORD_GUI);
-    view_port_free(view_port);
-    furi_message_queue_free(queue);
-    furi_mutex_free(state.mutex);
-
+    app_free(app);
     return 0;
 }

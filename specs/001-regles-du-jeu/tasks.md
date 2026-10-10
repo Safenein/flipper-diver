@@ -58,6 +58,7 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   saisie, sortie sur `Quit`. Rendu texte minimal provisoire (phase, séquence en
   texte, chrono, score). — REQ-001-5, 9, 24 (structure) — verify : manuel, une
   partie complète jouable en texte, et sortie propre sans fuite dans les logs.
+  *Code fait et compilé ; vérification sur l'appareil en attente.*
 - [ ] 9. Notifications : séquence d'erreur propre (vibreur 100 ms + LED rouge),
   `sequence_blink_green_10`, `sequence_success`, `sequence_error`. —
   REQ-001-7 (retour), REQ-001-22 — verify : manuel, y compris avec la
