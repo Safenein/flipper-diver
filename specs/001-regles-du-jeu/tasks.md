@@ -80,6 +80,8 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   jauge, « M3 » et score, flash d'erreur de 120 ms en `ColorXor`. Remplace le
   rendu texte pour la phase `Playing`. — REQ-001-13, REQ-001-7 (flash) —
   verify : manuel, les quatre critères de REQ-001-13.
+  *Code fait ; mise en page contrôlée sur un aperçu PC (faux canvas, texte
+  approximé) ; vérification sur l'appareil en attente.*
 - [ ] 13. Autres écrans : titre avec record, « Manche N », fin de manche avec
   révélation des bonus toutes les 500 ms, pause sans contenu de jeu, game over
   avec « Nouveau record ! ». Supprime le rendu texte provisoire. — REQ-001-1, 3,
