@@ -373,6 +373,50 @@ static void test_game_pause_outside_round_does_nothing(void) {
     CHECK_EQ(game.paused_phase, GamePhasePlaying);
 }
 
+/* Runs the timer out with the given score against the given record. */
+static GameEvents game_over_with(Game* game, uint32_t score, uint32_t best) {
+    game_init(game, SEED, best, 3);
+    game_key(game, GameKeyOk);
+    game_advance(game, GAME_ANNOUNCE_MS);
+    game->score = score;
+    return game_advance(game, GAME_TIMER_MAX_MS);
+}
+
+/* REQ-001-19: a score equal to the record is not a new record. */
+static void test_equal_score_is_not_a_record(void) {
+    Game game;
+    CHECK_EQ(game_over_with(&game, 1000, 1000), GameEventGameOver);
+    CHECK_EQ(game.best_score, 1000);
+    CHECK_EQ(game.best_round, 3);
+}
+
+static void test_higher_score_is_a_new_record(void) {
+    Game game;
+    CHECK_EQ(game_over_with(&game, 1001, 1000), GameEventGameOver | GameEventNewRecord);
+    CHECK_EQ(game.best_score, 1001);
+    CHECK_EQ(game.best_round, 1);
+}
+
+static void test_game_over_ok_returns_to_title(void) {
+    Game game;
+    game_over_with(&game, 10, 0);
+    CHECK_EQ(game_key(&game, GameKeyUp), GameEventNone);
+    game_key(&game, GameKeyOk);
+    CHECK_EQ(game.phase, GamePhaseTitle);
+    CHECK_EQ(game.best_score, 10);
+    /* A new game starts from 0 and keeps the record. */
+    game_key(&game, GameKeyOk);
+    CHECK_EQ(game.score, 0);
+    CHECK_EQ(game.round, 1);
+    CHECK_EQ(game.best_score, 10);
+}
+
+static void test_game_over_back_quits(void) {
+    Game game;
+    game_over_with(&game, 10, 0);
+    CHECK_EQ(game_key(&game, GameKeyBack), GameEventQuit);
+}
+
 int main(void) {
     RUN_TEST(test_init_shows_title_with_record);
     RUN_TEST(test_title_ok_starts_round_1_with_score_0);
@@ -399,5 +443,9 @@ int main(void) {
     RUN_TEST(test_pause_during_announce_and_round_end);
     RUN_TEST(test_back_in_pause_quits_without_record);
     RUN_TEST(test_game_pause_outside_round_does_nothing);
+    RUN_TEST(test_equal_score_is_not_a_record);
+    RUN_TEST(test_higher_score_is_a_new_record);
+    RUN_TEST(test_game_over_ok_returns_to_title);
+    RUN_TEST(test_game_over_back_quits);
     return test_report();
 }

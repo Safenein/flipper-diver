@@ -56,6 +56,11 @@ static GameEvents finish_round(Game* game) {
 
 static GameEvents game_over(Game* game) {
     game->phase = GamePhaseGameOver;
+    if(game->score > game->best_score) {
+        game->best_score = game->score;
+        game->best_round = game->round;
+        return GameEventGameOver | GameEventNewRecord;
+    }
     return GameEventGameOver;
 }
 
@@ -218,6 +223,13 @@ GameEvents game_key(Game* game, GameKey key) {
     case GamePhasePaused:
         if(key == GameKeyOk) {
             game->phase = game->paused_phase;
+        }
+        break;
+    case GamePhaseGameOver:
+        if(key == GameKeyOk) {
+            game->phase = GamePhaseTitle;
+        } else if(key == GameKeyBack) {
+            return GameEventQuit;
         }
         break;
     default:

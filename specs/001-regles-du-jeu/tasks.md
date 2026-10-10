@@ -45,7 +45,7 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   l'identique ; Back quitte (`Quit`) sans `NewRecord` ; `game_pause`. —
   REQ-001-16, 17, 18 (logique) — verify : test « pause à 2/5 flèches et 6,3 s →
   reprise identique » ; test « Back en pause → Quit, record inchangé ».
-- [ ] 7. Game over et record en mémoire : `NewRecord` seulement si le score
+- [x] 7. Game over et record en mémoire : `NewRecord` seulement si le score
   dépasse strictement le record ; OK → titre, Back → `Quit`. — REQ-001-19
   (logique) — verify : tests « score égal au record → pas de NewRecord » et
   « score supérieur → NewRecord ».
