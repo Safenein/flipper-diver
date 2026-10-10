@@ -20,6 +20,9 @@
     ];
     runScript = "${ufbtVenv}/bin/ufbt";
   };
+
+  # Furi-free sources linked into every host test (ADR-0004).
+  pureSources = "";
 in {
   languages.c = {
     enable = true;
@@ -49,6 +52,24 @@ in {
     build.exec = ''ufbt "$@"'';
     launch.exec = ''ufbt launch "$@"'';
     fmt.exec = ''clang-format -i $(git ls-files '*.c' '*.h')'';
+    # Builds and runs each tests/test_*.c on the host, with the warnings ufbt
+    # enables (gnu17 is gcc 12's default there) plus ASan and UBSan.
+    unit-tests.exec = ''
+      set -eu
+      out="$DEVENV_STATE/unit-tests"
+      mkdir -p "$out"
+      cd "$DEVENV_ROOT"
+      status=0
+      for t in tests/test_*.c; do
+        bin="$out/$(basename "$t" .c)"
+        cc -std=gnu17 -Wall -Wextra -Werror -Wdouble-promotion -Wundef \
+          -Wredundant-decls -g -fno-omit-frame-pointer \
+          -fsanitize=address,undefined -fno-sanitize-recover=all \
+          -I. -o "$bin" "$t" ${pureSources}
+        "$bin" || status=1
+      done
+      exit "$status"
+    '';
   };
 
   git-hooks.hooks.clang-format = {
@@ -71,6 +92,7 @@ in {
   };
 
   enterTest = ''
+    unit-tests
     ufbt
     clang-format --dry-run --Werror $(git ls-files '*.c' '*.h')
   '';

@@ -11,12 +11,13 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
 
 ## Socle
 
-- [ ] 1. Harnais de tests sur PC : `tests/test.h` (macros `CHECK`, code de sortie),
+- [x] 1. Harnais de tests sur PC : `tests/test.h` (macros `CHECK`, code de sortie),
   un premier test trivial, un script devenv `unit-tests` (gnu17, mêmes
   avertissements qu'ufbt, ASan et UBSan) appelé par `enterTest`, et
   `sources=["*.c*", "!tests"]` dans `application.fam`. — REQ-001-23 — verify :
   `devenv test` échoue si on casse le test exprès ;
-  `arm-none-eabi-nm dist/debug/flipper_diver_d.elf | grep test_` ne trouve rien.
+  `nm dist/debug/flipper_diver_d.elf | grep test_` ne trouve rien (le `nm` du
+  PC lit l'ELF ARM).
 - [ ] 2. Table des stratagèmes `stratagems.h/.c` : environ 20 entrées (nom,
   séquence, longueur), rédigées par Claude, avec les tests de la table
   (séquences de 3 à 8 flèches, noms uniques, noms de 21 caractères au plus).
