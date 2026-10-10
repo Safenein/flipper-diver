@@ -93,6 +93,8 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   verify : manuel, en ouvrant une session qFlipper en pleine manche. Si la GUI
   appelle quand même le callback d'un ViewPort masqué : barrer REQ-001-18 avec
   l'accord de l'utilisateur, et retirer le code.
+  *Code fait et compilé ; l'hypothèse sur la GUI reste à vérifier sur
+  l'appareil.*
 - [ ] 15. Instrumentation de mesure derrière une constante de compilation
   (désactivée par défaut) : intervalle entre rendus, latence entre appui et
   rendu, tas libre au début et à la fin d'une partie. — REQ-001-24, 25 —

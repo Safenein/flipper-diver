@@ -13,6 +13,8 @@
 #define EVENT_QUEUE_SIZE 16
 /* 30 Hz, above the 25 Hz of REQ-001-24. */
 #define TICK_PERIOD_MS   33
+/* No redraw for this long while a round runs: the screen is taken. */
+#define SCREEN_LOST_MS   250
 
 typedef enum {
     AppEventTypeInput,
@@ -35,6 +37,7 @@ typedef struct {
     Game game;
 
     uint32_t last_tick; /* main thread only */
+    uint32_t last_draw_tick; /* protected by mutex, written by the GUI thread */
 } App;
 
 /* Wrong arrow: short vibration and red LED (REQ-001-7). Like every sequence
@@ -66,6 +69,7 @@ static void app_draw_callback(Canvas* canvas, void* ctx) {
     App* app = ctx;
     furi_check(furi_mutex_acquire(app->mutex, FuriWaitForever) == FuriStatusOk);
     view_draw(canvas, &app->game);
+    app->last_draw_tick = furi_get_tick();
     furi_mutex_release(app->mutex);
 }
 
@@ -136,6 +140,7 @@ static App* app_alloc(void) {
     app->notifications = furi_record_open(RECORD_NOTIFICATION);
 
     app->last_tick = furi_get_tick();
+    app->last_draw_tick = app->last_tick;
     furi_timer_start(app->timer, furi_ms_to_ticks(TICK_PERIOD_MS));
     return app;
 }
@@ -167,6 +172,13 @@ int32_t flipper_diver_app(void* p) {
 
         furi_check(furi_mutex_acquire(app->mutex, FuriWaitForever) == FuriStatusOk);
         /* The timer is brought up to date before any key (design.md). */
+        /* The GUI only calls the draw callback of the visible ViewPort: no
+         * redraw although we keep asking for one means another ViewPort
+         * covers ours, so the round pauses (REQ-001-18, design.md). */
+        if(event.type == AppEventTypeTick &&
+           furi_get_tick() - app->last_draw_tick > furi_ms_to_ticks(SCREEN_LOST_MS)) {
+            game_pause(&app->game);
+        }
         GameEvents events = game_advance(&app->game, app_elapsed_ms(app));
         GameKey key;
         if(event.type == AppEventTypeInput && app_game_key(&event.input, &key)) {
