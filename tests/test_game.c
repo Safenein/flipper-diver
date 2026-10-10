@@ -309,6 +309,70 @@ static void test_no_consecutive_repeat_over_10000_rounds(void) {
     }
 }
 
+/* REQ-001-16, 17: pause at 2/5 arrows and 6.3 s -> identical on resume. */
+static void test_pause_freezes_and_resumes_identically(void) {
+    Game game;
+    start_playing(&game);
+    force_current(&game, "Eagle 500kg Bomb");
+    game_advance(&game, 10000 - 6300);
+    type(&game, "UR");
+    game_key(&game, GameKeyBack);
+    CHECK_EQ(game.phase, GamePhasePaused);
+    CHECK(game_current_stratagem(&game) == NULL);
+    game_advance(&game, 2000);
+    CHECK_EQ(type(&game, "DD"), GameEventNone);
+    game_key(&game, GameKeyOk);
+    CHECK_EQ(game.phase, GamePhasePlaying);
+    CHECK_EQ(game.progress, 2);
+    CHECK_EQ(game.timer_ms, 6300);
+}
+
+static void test_pause_during_announce_and_round_end(void) {
+    Game game;
+    start(&game);
+    game_advance(&game, 500);
+    game_key(&game, GameKeyBack);
+    game_advance(&game, 5000);
+    game_key(&game, GameKeyOk);
+    CHECK_EQ(game.phase, GamePhaseAnnounce);
+    CHECK_EQ(game.phase_ms, GAME_ANNOUNCE_MS - 500);
+
+    last_stratagem_of_round(&game, 1);
+    complete_current(&game);
+    game_advance(&game, 1000);
+    game_key(&game, GameKeyBack);
+    game_advance(&game, 5000);
+    game_key(&game, GameKeyOk);
+    CHECK_EQ(game.phase, GamePhaseRoundEnd);
+    CHECK_EQ(game.phase_ms, GAME_ROUND_END_MS - 1000);
+}
+
+/* REQ-001-17: Back while paused quits, the record stays. */
+static void test_back_in_pause_quits_without_record(void) {
+    Game game;
+    game_init(&game, SEED, 1000, 2);
+    game_key(&game, GameKeyOk);
+    game.score = 5000;
+    game_key(&game, GameKeyBack);
+    CHECK_EQ(game_key(&game, GameKeyBack), GameEventQuit);
+    CHECK_EQ(game.best_score, 1000);
+    CHECK_EQ(game.best_round, 2);
+}
+
+/* REQ-001-18 (logic): game_pause() only acts while a round runs. */
+static void test_game_pause_outside_round_does_nothing(void) {
+    Game game;
+    game_init(&game, SEED, 0, 0);
+    game_pause(&game);
+    CHECK_EQ(game.phase, GamePhaseTitle);
+
+    start_playing(&game);
+    game_pause(&game);
+    CHECK_EQ(game.phase, GamePhasePaused);
+    game_pause(&game);
+    CHECK_EQ(game.paused_phase, GamePhasePlaying);
+}
+
 int main(void) {
     RUN_TEST(test_init_shows_title_with_record);
     RUN_TEST(test_title_ok_starts_round_1_with_score_0);
@@ -331,5 +395,9 @@ int main(void) {
     RUN_TEST(test_round_end_lasts_3_s);
     RUN_TEST(test_round_end_ok_skips_wait);
     RUN_TEST(test_no_consecutive_repeat_over_10000_rounds);
+    RUN_TEST(test_pause_freezes_and_resumes_identically);
+    RUN_TEST(test_pause_during_announce_and_round_end);
+    RUN_TEST(test_back_in_pause_quits_without_record);
+    RUN_TEST(test_game_pause_outside_round_does_nothing);
     return test_report();
 }

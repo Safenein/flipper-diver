@@ -41,7 +41,7 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   phase `RoundEnd` de 3 s ou OK, puis annonce de la manche suivante. —
   REQ-001-11, 12 (logique) — verify : tests « manche 3, 4 567 ms, sans erreur →
   +125, +45, +100 » et « manche 1 avec erreur, 10 000 ms → +75, +100 ».
-- [ ] 6. Pause : Back en annonce, manche ou fin de manche ; OK reprend à
+- [x] 6. Pause : Back en annonce, manche ou fin de manche ; OK reprend à
   l'identique ; Back quitte (`Quit`) sans `NewRecord` ; `game_pause`. —
   REQ-001-16, 17, 18 (logique) — verify : test « pause à 2/5 flèches et 6,3 s →
   reprise identique » ; test « Back en pause → Quit, record inchangé ».

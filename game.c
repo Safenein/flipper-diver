@@ -179,6 +179,21 @@ GameEvents game_advance(Game* game, uint32_t elapsed_ms) {
 }
 
 GameEvents game_key(Game* game, GameKey key) {
+    if(key == GameKeyBack) {
+        switch(game->phase) {
+        case GamePhaseAnnounce:
+        case GamePhasePlaying:
+        case GamePhaseRoundEnd:
+            game_pause(game);
+            return GameEventNone;
+        case GamePhasePaused:
+            /* Leaving mid-game: the game is not over, no record. */
+            return GameEventQuit;
+        default:
+            break;
+        }
+    }
+
     switch(game->phase) {
     case GamePhaseTitle:
         if(key == GameKeyOk) {
@@ -200,6 +215,11 @@ GameEvents game_key(Game* game, GameKey key) {
             start_round(game, game->round + 1);
         }
         break;
+    case GamePhasePaused:
+        if(key == GameKeyOk) {
+            game->phase = game->paused_phase;
+        }
+        break;
     default:
         break;
     }
@@ -207,5 +227,16 @@ GameEvents game_key(Game* game, GameKey key) {
 }
 
 void game_pause(Game* game) {
-    (void)game;
+    switch(game->phase) {
+    case GamePhaseAnnounce:
+    case GamePhasePlaying:
+    case GamePhaseRoundEnd:
+        /* Every countdown stops: game_advance() only runs them in these
+         * phases, so resuming finds the exact same state. */
+        game->paused_phase = game->phase;
+        game->phase = GamePhasePaused;
+        break;
+    default:
+        break;
+    }
 }
