@@ -18,7 +18,7 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   `devenv test` échoue si on casse le test exprès ;
   `nm dist/debug/flipper_diver_d.elf | grep test_` ne trouve rien (le `nm` du
   PC lit l'ELF ARM).
-- [ ] 2. Table des stratagèmes `stratagems.h/.c` : environ 20 entrées (nom,
+- [x] 2. Table des stratagèmes `stratagems.h/.c` : environ 20 entrées (nom,
   séquence, longueur), rédigées par Claude, avec les tests de la table
   (séquences de 3 à 8 flèches, noms uniques, noms de 21 caractères au plus).
   — REQ-001-15, REQ-001-13 (noms) — verify : `unit-tests`.
