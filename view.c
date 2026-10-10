@@ -220,28 +220,17 @@ static void draw_hints(Canvas* canvas, const char* ok, const char* back) {
     draw_key_hint(canvas, KeyHintRight, &I_button_ok_7x7, ok);
 }
 
-#define SKULL_W 16
-#define SKULL_Y 9
-
-/* Skull of the Helldivers logo on both sides (title and game over). */
-static void draw_skulls(Canvas* canvas) {
-    canvas_draw_icon(canvas, 0, SKULL_Y, &I_skull_16x20);
-    canvas_draw_icon(canvas, 128 - SKULL_W, SKULL_Y, &I_skull_16x20);
+/* Emblem of the Helldivers logo (skull and wings), centered. */
+static void draw_emblem(Canvas* canvas, int32_t y) {
+    canvas_draw_icon(canvas, (128 - icon_get_width(&I_emblem_109x18)) / 2, y, &I_emblem_109x18);
 }
 
+/* Title above the emblem, like the game's name in its logo. */
 static void draw_title(Canvas* canvas, const Game* game) {
     char line[40];
-    draw_skulls(canvas);
     canvas_set_font(canvas, FontPrimary);
-    draw_center(canvas, 2, "FLIPPER DIVER");
-
-    /* Decorative sequence: the Reinforce stratagem. */
-    const Stratagem* reinforce = &stratagems[0];
-    size_t length = stratagem_length(reinforce);
-    int32_t x = 64 - (int32_t)(length * ARROW_PITCH - (ARROW_PITCH - ARROW_SIZE)) / 2;
-    for(size_t i = 0; i < length; i++) {
-        draw_arrow(canvas, x + (int32_t)i * ARROW_PITCH, 16, stratagem_arrow(reinforce, i), true);
-    }
+    draw_center(canvas, 1, "FLIPPER DIVER");
+    draw_emblem(canvas, 13);
 
     canvas_set_font(canvas, FontSecondary);
     if(game->best_round) {
@@ -254,7 +243,7 @@ static void draw_title(Canvas* canvas, const Game* game) {
     } else {
         snprintf(line, sizeof(line), "Record %lu", (unsigned long)game->best_score);
     }
-    draw_center(canvas, 34, line);
+    draw_center(canvas, 37, line);
     /* « OK pour jouer » prompt of REQ-001-1; Back quits from here as
      * everywhere. */
     draw_key_hint(canvas, KeyHintCenter, &I_button_ok_7x7, "Jouer");
@@ -332,25 +321,28 @@ static void draw_paused(Canvas* canvas, const Game* game) {
 
 static void draw_game_over(Canvas* canvas, const Game* game) {
     char line[40];
-    draw_skulls(canvas);
+    draw_emblem(canvas, 0);
     canvas_set_font(canvas, FontPrimary);
-    draw_center(canvas, 1, "GAME OVER");
-    /* Score, round and record on 3 lines: between the skulls, a single
-     * line « Score N  Manche N » would not fit. */
+    draw_center(canvas, 19, "GAME OVER");
     canvas_set_font(canvas, FontSecondary);
-    snprintf(line, sizeof(line), "Score %lu", (unsigned long)game->score);
-    draw_center(canvas, 13, line);
-    snprintf(line, sizeof(line), "Manche %lu", (unsigned long)game->round);
-    draw_center(canvas, 21, line);
     snprintf(
         line,
         sizeof(line),
-        "Record %lu (M%lu)",
-        (unsigned long)game->best_score,
-        (unsigned long)game->best_round);
-    draw_center(canvas, 29, line);
-    if(game->new_record) {
-        /* Inverted strip, sized to the text, below the skulls. */
+        "Score %lu  Manche %lu",
+        (unsigned long)game->score,
+        (unsigned long)game->round);
+    draw_center(canvas, 30, line);
+    if(!game->new_record) {
+        snprintf(
+            line,
+            sizeof(line),
+            "Record %lu (M%lu)",
+            (unsigned long)game->best_score,
+            (unsigned long)game->best_round);
+        draw_center(canvas, 40, line);
+    } else {
+        /* Inverted strip, sized to the text, in place of the record line:
+         * the new record is the score shown above. */
         const char* text = "NOUVEAU RECORD !";
         canvas_set_font(canvas, FontPrimary);
         int32_t width = canvas_string_width(canvas, text) + 2 * NEW_RECORD_PAD;

@@ -13,7 +13,7 @@ Cible : firmware officiel, canal release (ufbt), en C avec l'API Furi publique.
 - `best_score.c/.h` — record sur la carte SD (FlipperFormat).
 - `flipper_diver.c` — point d'entrée `flipper_diver_app` : file d'événements, timer,
   notifications, perte d'écran, mesures (`FLIPPER_DIVER_METRICS`).
-- `images/` — icônes des stratagèmes (16×16), crâne et touches, générées par
+- `images/` — icônes des stratagèmes (16×16), emblème et touches, générées par
   `tools/make_icons.py` (source ASCII : modifier le script, pas les PNG).
   `flipper_diver.png` — icône 10×10 de l'app.
 - `tests/` — tests unitaires sur PC (`tests/test.h`), exclus du FAP.

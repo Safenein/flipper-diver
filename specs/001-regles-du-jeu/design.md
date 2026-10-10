@@ -139,11 +139,13 @@ de l'écran de manche (en pixels, 128×64) :
   seul onglet OK centré « Jouer », qui tient lieu d'invite « OK pour jouer »
   (REQ-001-1). Le dessin est recopié dans `view.c:draw_key_hint`, car les
   icônes de touches du firmware ne sont pas dans le SDK.
-- Titre et game over : le crâne du logo de Helldivers, fait de bandes
-  horizontales (16×20 px), de chaque côté. Le texte tient dans les 92 px du
-  milieu ; au game over, score, manche et record passent donc sur trois lignes.
-  Le bandeau inversé « NOUVEAU RECORD ! » est sous les crânes, large du texte
-  plus 6 px de chaque côté.
+- Titre et game over : l'emblème du logo de Helldivers (crâne entre deux ailes
+  de trois barres, 109×18 px), centré. Sur le titre, il est sous « FLIPPER
+  DIVER », comme sous le nom du jeu dans le logo ; au game over, il est en haut,
+  au-dessus de « GAME OVER ». Sur un nouveau record, le bandeau inversé
+  « NOUVEAU RECORD ! » (large du texte plus 6 px de chaque côté) prend la
+  place de la ligne du record : le record est alors le score affiché juste
+  au-dessus (REQ-001-19).
 - Flash d'erreur (REQ-001-7) : pendant 120 ms après une erreur, un
   `canvas_draw_box` plein écran en `ColorXor` inverse l'image.
 - L'écran de fin de manche révèle une ligne de bonus toutes les 500 ms, à partir
