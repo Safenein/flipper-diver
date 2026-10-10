@@ -73,6 +73,8 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   `fap_icon_assets="images"`, tableau `stratagem_icons[]` et `_Static_assert`
   dans `view.c`. — REQ-001-14 — verify : le build échoue si on retire une
   entrée du tableau ; contrôle visuel sur l'appareil.
+  *Code fait ; échec du build sans une icône vérifié ; contrôle visuel en
+  attente.*
 - [ ] 12. Écran de manche définitif `view.c` : rangée de 5 icônes avec l'actif
   encadré au centre et les réussis barrés, nom, flèches pleines ou creuses,
   jauge, « M3 » et score, flash d'erreur de 120 ms en `ColorXor`. Remplace le

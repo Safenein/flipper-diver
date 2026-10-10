@@ -10,6 +10,7 @@ App(
     fap_category="Games",
     fap_version="0.1",
     fap_icon="flipper_diver.png",  # 10x10 1-bit PNG
+    fap_icon_assets="images",  # stratagem icons, see tools/make_icons.py
     fap_description="Stratagem input minigame inspired by Helldivers 2",
     fap_author="safenein",
 )

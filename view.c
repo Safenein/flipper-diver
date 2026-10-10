@@ -2,8 +2,42 @@
 
 #include <stdio.h>
 
+#include "flipper_diver_icons.h"
+
 /* Provisional text rendering (task 8 of specs/001-regles-du-jeu); tasks 12
  * and 13 replace it with the final screens. */
+
+/* One 16x16 icon per stratagem, in the order of stratagems[] (stratagems.c).
+ * Sources: tools/make_icons.py. One entry per line, like stratagems.c. */
+/* clang-format off */
+static const Icon* const stratagem_icons[] = {
+    &I_reinforce_16x16,
+    &I_resupply_16x16,
+    &I_sos_beacon_16x16,
+    &I_hellbomb_16x16,
+    &I_eagle_rearm_16x16,
+    &I_eagle_500kg_16x16,
+    &I_eagle_airstrike_16x16,
+    &I_eagle_strafing_run_16x16,
+    &I_orbital_laser_16x16,
+    &I_orbital_precision_16x16,
+    &I_orbital_railcannon_16x16,
+    &I_orbital_380mm_16x16,
+    &I_machine_gun_16x16,
+    &I_autocannon_16x16,
+    &I_railgun_16x16,
+    &I_quasar_cannon_16x16,
+    &I_recoilless_rifle_16x16,
+    &I_shield_pack_16x16,
+    &I_guard_dog_16x16,
+    &I_patriot_exosuit_16x16,
+};
+/* clang-format on */
+
+/* REQ-001-14: the build fails if a stratagem has no icon. */
+_Static_assert(
+    COUNT_OF(stratagem_icons) == STRATAGEM_COUNT,
+    "every stratagem needs an icon in stratagem_icons");
 
 static void draw_center(Canvas* canvas, int32_t y, const char* text) {
     canvas_draw_str_aligned(canvas, 64, y, AlignCenter, AlignTop, text);
@@ -42,6 +76,7 @@ static void draw_playing(Canvas* canvas, const Game* game) {
         canvas_set_font(canvas, FontPrimary);
         draw_center(canvas, 18, line);
         canvas_set_font(canvas, FontSecondary);
+        canvas_draw_icon(canvas, 0, 0, stratagem_icons[game->round_stratagems[game->current]]);
     }
     snprintf(
         line,
