@@ -1,6 +1,6 @@
-"""Writes the 16x16 1-bit stratagem icons from ASCII art ('#' = black pixel).
+"""Writes the app's 1-bit icons from ASCII art ('#' = black pixel).
 
-The ASCII art below is the source of images/*_16x16.png: edit it, then run
+The ASCII art below is the source of images/*.png: edit it, then run
 `python tools/make_icons.py images` in the devenv shell. Icon order in
 view.c must follow stratagems.c.
 """
@@ -373,6 +373,71 @@ ICONS = {
 """,
 }
 
+# Interface icons, of any size, written as <name>_<w>x<h>.png. The key icons
+# are drawn white inside the black key hint buttons.
+UI_ICONS = {
+    # Helldivers-style hanging banner: a skull and two chevrons.
+    "banner": """
+################
+..############..
+..############..
+..####....####..
+..###......###..
+..##........##..
+..##.##..##.##..
+..##.##..##.##..
+..##...##...##..
+..###......###..
+..###.#..#.###..
+..####....####..
+..############..
+..############..
+..#..........#..
+..############..
+..############..
+..##.######.##..
+..##..####..##..
+..###..##..###..
+..####....####..
+..#####..#####..
+..############..
+..##.######.##..
+..##..####..##..
+..###..##..###..
+..####....####..
+..#####..#####..
+..############..
+..############..
+..#..........#..
+..############..
+..#####..#####..
+..####....####..
+..###......###..
+..##........##..
+..#..........#..
+""",
+    # Ok key: a disc, like the firmware's key hints.
+    "button_ok": """
+..###..
+.#####.
+#######
+#######
+#######
+.#####.
+..###..
+""",
+    # Back key: a U-turn arrow.
+    "button_back": """
+..#......
+.##......
+#######..
+.##....#.
+..#....#.
+.......#.
+..#####..
+""",
+}
+
 SIZE = 16
 
 
@@ -382,15 +447,17 @@ def png_chunk(kind: bytes, data: bytes) -> bytes:
 
 
 def write_png(path: Path, rows: list[str]) -> None:
+    width = len(rows[0])
+    stride = (width + 7) // 8
     raw = bytearray()
     for row in rows:
         raw.append(0)  # filter: none
         bits = 0
         for x, pixel in enumerate(row):
             if pixel == ".":  # white = 1 in 1-bit grayscale
-                bits |= 1 << (SIZE - 1 - x)
-        raw += bits.to_bytes(SIZE // 8, "big")
-    header = struct.pack(">IIBBBBB", SIZE, SIZE, 1, 0, 0, 0, 0)
+                bits |= 1 << (stride * 8 - 1 - x)
+        raw += bits.to_bytes(stride, "big")
+    header = struct.pack(">IIBBBBB", width, len(rows), 1, 0, 0, 0, 0)
     path.write_bytes(
         b"\x89PNG\r\n\x1a\n"
         + png_chunk(b"IHDR", header)
@@ -399,17 +466,25 @@ def write_png(path: Path, rows: list[str]) -> None:
     )
 
 
+def parse(name: str, art: str) -> list[str]:
+    rows = art.strip("\n").split("\n")
+    for y, row in enumerate(rows):
+        assert len(row) == len(rows[0]), f"{name} row {y}: {len(row)} chars"
+        assert set(row) <= {"#", "."}, f"{name} row {y}: bad char"
+    return rows
+
+
 def main() -> None:
     out = Path(sys.argv[1])
     out.mkdir(parents=True, exist_ok=True)
     for name, art in ICONS.items():
-        rows = art.strip("\n").split("\n")
-        assert len(rows) == SIZE, f"{name}: {len(rows)} rows"
-        for y, row in enumerate(rows):
-            assert len(row) == SIZE, f"{name} row {y}: {len(row)} chars"
-            assert set(row) <= {"#", "."}, f"{name} row {y}: bad char"
+        rows = parse(name, art)
+        assert len(rows) == SIZE and len(rows[0]) == SIZE, f"{name}: not 16x16"
         write_png(out / f"{name}_16x16.png", rows)
-    print(f"{len(ICONS)} icons written to {out}")
+    for name, art in UI_ICONS.items():
+        rows = parse(name, art)
+        write_png(out / f"{name}_{len(rows[0])}x{len(rows)}.png", rows)
+    print(f"{len(ICONS) + len(UI_ICONS)} icons written to {out}")
 
 
 if __name__ == "__main__":

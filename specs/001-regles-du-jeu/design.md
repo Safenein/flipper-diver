@@ -41,7 +41,7 @@ flowchart LR
 | `view.h`, `view.c` | Rendu de chaque phase, table des icônes | oui |
 | `best_score.h`, `best_score.c` | Lecture et écriture du record | oui |
 | `flipper_diver.c` | Point d'entrée, file, timer, notifications | oui |
-| `images/*.png` | Icônes 16×16 des stratagèmes | — |
+| `images/*.png` | Icônes 16×16 des stratagèmes, bannière, icônes des touches OK et Back | — |
 | `tests/test_game.c`, `tests/test.h` | Tests unitaires sur PC | non |
 
 ### Module de règles `game.c` (REQ-001-3 à 11, 16, 17, 19, 23, 25)
@@ -130,7 +130,20 @@ de l'écran de manche (en pixels, 128×64) :
 
 - Les flèches sont dessinées avec des primitives (triangles et rectangles à
   partir de `canvas_draw_line` et `canvas_draw_box`), pas avec des icônes, pour
-  avoir les versions pleine et creuse dans les 4 directions.
+  avoir les versions pleine et creuse dans les 4 directions. La flèche creuse
+  n'a que son contour : pas de trait à la base de la pointe, là où la tige la
+  rejoint.
+- Touches (titre, fin de manche, pause, game over) : onglets noirs en bas de
+  l'écran, au style des `elements_button_*` du firmware, avec l'icône de la
+  touche et le libellé en blanc. Back à gauche, OK à droite ; sur le titre, un
+  seul onglet OK centré « Jouer », qui tient lieu d'invite « OK pour jouer »
+  (REQ-001-1). Le dessin est recopié dans `view.c:draw_key_hint`, car les
+  icônes de touches du firmware ne sont pas dans le SDK.
+- Titre et game over : une bannière Helldivers de 16×37 px (crâne et chevrons)
+  pend de chaque côté. Le texte tient dans les 92 px du milieu ; au game over,
+  score, manche et record passent donc sur trois lignes. Le bandeau inversé
+  « NOUVEAU RECORD ! » est sous les bannières, large du texte plus 6 px de
+  chaque côté.
 - Flash d'erreur (REQ-001-7) : pendant 120 ms après une erreur, un
   `canvas_draw_box` plein écran en `ColorXor` inverse l'image.
 - L'écran de fin de manche révèle une ligne de bonus toutes les 500 ms, à partir

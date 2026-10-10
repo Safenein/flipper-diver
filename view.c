@@ -87,14 +87,18 @@ static void arrow_span(
 }
 
 /* A 12x12 arrow: triangular head on rows 0-5, stem 4 px wide on rows 6-11.
- * Filled once entered, outlined while still to enter. */
+ * Filled once entered, outlined while still to enter: the outline skips
+ * the base of the head where the stem joins it. */
 static void draw_arrow(Canvas* canvas, int32_t x, int32_t y, StratagemArrow dir, bool filled) {
     const int32_t mid = ARROW_SIZE / 2; /* 6 */
     for(int32_t v = 0; v < mid; v++) {
         int32_t u1 = mid - 1 - v;
         int32_t u2 = mid + v;
-        if(filled || v == mid - 1) {
+        if(filled) {
             arrow_span(canvas, x, y, dir, u1, u2, v);
+        } else if(v == mid - 1) {
+            arrow_span(canvas, x, y, dir, u1, 4, v);
+            arrow_span(canvas, x, y, dir, 7, u2, v);
         } else {
             arrow_span(canvas, x, y, dir, u1, u1, v);
             arrow_span(canvas, x, y, dir, u2, u2, v);
@@ -173,15 +177,60 @@ static void draw_playing(Canvas* canvas, const Game* game) {
     }
 }
 
-/* Footer line with the two key hints (Ok on the left, Back on the right). */
-static void draw_hints(Canvas* canvas, const char* ok, const char* back) {
+typedef enum {
+    KeyHintLeft,
+    KeyHintCenter,
+    KeyHintRight,
+} KeyHintPosition;
+
+#define KEY_HINT_H   12
+#define KEY_HINT_PAD 3
+
+/* Key hint in the firmware's style (gui/elements.c, elements_button_*):
+ * a black tab at the bottom with slanted outer edges, key icon and label
+ * in white. Our own copy: the firmware's key icons are not in the SDK. */
+static void
+    draw_key_hint(Canvas* canvas, KeyHintPosition position, const Icon* icon, const char* label) {
     canvas_set_font(canvas, FontSecondary);
-    canvas_draw_str_aligned(canvas, 0, 63, AlignLeft, AlignBottom, ok);
-    canvas_draw_str_aligned(canvas, 127, 63, AlignRight, AlignBottom, back);
+    int32_t icon_w = icon_get_width(icon);
+    int32_t width =
+        KEY_HINT_PAD + icon_w + KEY_HINT_PAD + canvas_string_width(canvas, label) + KEY_HINT_PAD;
+    int32_t x = position == KeyHintLeft  ? 0 :
+                position == KeyHintRight ? 128 - width :
+                                           (128 - width) / 2;
+    int32_t y = 64 - KEY_HINT_H;
+    canvas_draw_box(canvas, x, y, width, KEY_HINT_H);
+    for(int32_t i = 0; i < 3; i++) {
+        if(position != KeyHintLeft) {
+            canvas_draw_line(canvas, x - 1 - i, 63, x - 1 - i, y + i);
+        }
+        if(position != KeyHintRight) {
+            canvas_draw_line(canvas, x + width + i, 63, x + width + i, y + i);
+        }
+    }
+    canvas_set_color(canvas, ColorWhite);
+    canvas_draw_icon(canvas, x + KEY_HINT_PAD, 64 - KEY_HINT_PAD - icon_get_height(icon), icon);
+    canvas_draw_str(canvas, x + KEY_HINT_PAD + icon_w + KEY_HINT_PAD, 64 - KEY_HINT_PAD, label);
+    canvas_set_color(canvas, ColorBlack);
+}
+
+/* Footer with the two key hints: Back on the left, Ok on the right. */
+static void draw_hints(Canvas* canvas, const char* ok, const char* back) {
+    draw_key_hint(canvas, KeyHintLeft, &I_button_back_9x7, back);
+    draw_key_hint(canvas, KeyHintRight, &I_button_ok_7x7, ok);
+}
+
+#define BANNER_W 16
+
+/* Helldivers banners hanging on both sides (title and game over). */
+static void draw_banners(Canvas* canvas) {
+    canvas_draw_icon(canvas, 0, 0, &I_banner_16x37);
+    canvas_draw_icon(canvas, 128 - BANNER_W, 0, &I_banner_16x37);
 }
 
 static void draw_title(Canvas* canvas, const Game* game) {
     char line[40];
+    draw_banners(canvas);
     canvas_set_font(canvas, FontPrimary);
     draw_center(canvas, 2, "FLIPPER DIVER");
 
@@ -205,12 +254,13 @@ static void draw_title(Canvas* canvas, const Game* game) {
         snprintf(line, sizeof(line), "Record %lu", (unsigned long)game->best_score);
     }
     draw_center(canvas, 34, line);
-    /* REQ-001-1 wording; Back quits from here as everywhere. */
-    canvas_draw_str_aligned(canvas, 64, 63, AlignCenter, AlignBottom, "OK pour jouer");
+    /* « OK pour jouer » prompt of REQ-001-1; Back quits from here as
+     * everywhere. */
+    draw_key_hint(canvas, KeyHintCenter, &I_button_ok_7x7, "Jouer");
 }
 
 static void draw_announce(Canvas* canvas, const Game* game) {
-    char line[16];
+    char line[24];
     canvas_set_font(canvas, FontPrimary);
     draw_center(canvas, 8, "MANCHE");
     canvas_set_font(canvas, FontBigNumbers);
@@ -222,8 +272,8 @@ static void draw_announce(Canvas* canvas, const Game* game) {
 }
 
 #define ROUND_END_REVEAL_MS 500
-#define ROUND_END_ROW_Y     16
-#define ROUND_END_ROW_STEP  10
+#define ROUND_END_ROW_Y     14 /* 4 rows end above the key hints */
+#define ROUND_END_ROW_STEP  9
 
 static void draw_bonus_row(Canvas* canvas, int32_t row, const char* label, uint32_t value) {
     char number[16];
@@ -256,7 +306,7 @@ static void draw_round_end(Canvas* canvas, const Game* game) {
             canvas, row, "Total", game->round_bonus + game->time_bonus + game->perfect_bonus);
     }
 
-    draw_hints(canvas, "OK: suite", "Back: pause");
+    draw_hints(canvas, "Suite", "Pause");
 }
 
 /* Nothing of the round shows while paused: no reading ahead (REQ-001-16). */
@@ -272,37 +322,43 @@ static void draw_paused(Canvas* canvas, const Game* game) {
         (unsigned long)game->round,
         (unsigned long)game->score);
     draw_center(canvas, 28, line);
-    draw_hints(canvas, "OK: reprendre", "Back: quitter");
+    draw_hints(canvas, "Reprendre", "Quitter");
 }
+
+#define NEW_RECORD_Y   38
+#define NEW_RECORD_H   12
+#define NEW_RECORD_PAD 6 /* on each side of the text */
 
 static void draw_game_over(Canvas* canvas, const Game* game) {
     char line[40];
+    draw_banners(canvas);
     canvas_set_font(canvas, FontPrimary);
-    draw_center(canvas, 2, "GAME OVER");
+    draw_center(canvas, 1, "GAME OVER");
+    /* Score, round and record on 3 lines: between the banners, a single
+     * line « Score N  Manche N » would not fit. */
     canvas_set_font(canvas, FontSecondary);
-    snprintf(
-        line,
-        sizeof(line),
-        "Score %lu  Manche %lu",
-        (unsigned long)game->score,
-        (unsigned long)game->round);
-    draw_center(canvas, 16, line);
+    snprintf(line, sizeof(line), "Score %lu", (unsigned long)game->score);
+    draw_center(canvas, 13, line);
+    snprintf(line, sizeof(line), "Manche %lu", (unsigned long)game->round);
+    draw_center(canvas, 21, line);
     snprintf(
         line,
         sizeof(line),
         "Record %lu (M%lu)",
         (unsigned long)game->best_score,
         (unsigned long)game->best_round);
-    draw_center(canvas, 27, line);
+    draw_center(canvas, 29, line);
     if(game->new_record) {
-        /* Inverted banner. */
-        canvas_draw_box(canvas, 12, 38, 104, 11);
-        canvas_set_color(canvas, ColorWhite);
+        /* Inverted strip, sized to the text, below the banners. */
+        const char* text = "NOUVEAU RECORD !";
         canvas_set_font(canvas, FontPrimary);
-        draw_center(canvas, 39, "NOUVEAU RECORD !");
+        int32_t width = canvas_string_width(canvas, text) + 2 * NEW_RECORD_PAD;
+        canvas_draw_box(canvas, 64 - width / 2, NEW_RECORD_Y, width, NEW_RECORD_H);
+        canvas_set_color(canvas, ColorWhite);
+        draw_center(canvas, NEW_RECORD_Y + 2, text);
         canvas_set_color(canvas, ColorBlack);
     }
-    draw_hints(canvas, "OK: titre", "Back: quitter");
+    draw_hints(canvas, "Titre", "Quitter");
 }
 
 void view_draw(Canvas* canvas, const Game* game) {
