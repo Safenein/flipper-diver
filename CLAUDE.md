@@ -15,7 +15,8 @@ Cible : firmware officiel, canal release (ufbt), en C avec l'API Furi publique.
   notifications, perte d'écran, mesures (`FLIPPER_DIVER_METRICS`).
 - `images/` — icônes des stratagèmes (16×16), emblème et touches, générées par
   `tools/make_icons.py` (source ASCII : modifier le script, pas les PNG).
-  `flipper_diver.png` — icône 10×10 de l'app.
+  `flipper_diver.png` — icône 10×10 de l'app (crâne de l'emblème), générée par le
+  même script.
 - `tests/` — tests unitaires sur PC (`tests/test.h`), exclus du FAP.
 - `docs/spec/` — spec système et ADR ; `specs/NNN-*/` — specs de fonctionnalités. À
   lire avant tout changement de comportement, à mettre à jour (skill tech-specs) quand
@@ -25,12 +26,23 @@ Cible : firmware officiel, canal release (ufbt), en C avec l'API Furi publique.
 
 - `build` (= `ufbt`) — compile vers `dist/flipper_diver.fap`.
 - `launch` (= `ufbt launch`) — installe et lance sur le Flipper branché en USB.
-- `unit-tests` — compile et lance `tests/test_*.c` sur PC (gnu17, avertissements
-  d'ufbt, ASan, UBSan). Un module pur ajouté doit l'être à `pureSources` dans
-  `devenv.nix`.
+- `unit-tests` (= `tools/unit-tests.sh`, aussi lancé par la CI) — compile et lance
+  `tests/test_*.c` sur PC (gnu17, avertissements d'ufbt, ASan, UBSan). Un module
+  pur ajouté doit l'être à `pure_sources` dans ce script.
 - `fmt` — clang-format.
 - `devenv test` — tests sur PC, build ufbt et vérification du formatage.
-- `python tools/make_icons.py images` — régénère les icônes.
+- `python tools/make_icons.py images` — régénère les icônes et l'icône de l'app.
+- `changelog` (= `git-cliff`, config `cliff.toml`) — régénère `CHANGELOG.md`.
+
+## CI et releases
+
+- `.github/workflows/ci.yml` — tests, formatage et build sur chaque push et PR.
+- `nightly.yml` — chaque nuit, si `master` a bougé : pré-release `nightly`, tag
+  déplacé par la CI (exclu de git-cliff par `tag_pattern`).
+- `release.yml` — sur un tag `vX.Y` : vérifie qu'il correspond à `fap_version`
+  dans `application.fam`, puis publie la release avec ses notes git-cliff.
+- Procédure de release : voir README.md. Les tags sont signés (`git tag -s`) et
+  poussés avec `git push origin vX.Y` : `jj git push` ne pousse pas les tags.
 
 ## Gestion de versions
 

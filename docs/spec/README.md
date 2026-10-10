@@ -1,6 +1,6 @@
 ---
 status: draft
-updated: 2026-10-10
+updated: 2026-10-11
 ---
 
 # Flipper Diver
@@ -126,7 +126,15 @@ Un fichier absent, illisible ou d'une autre version vaut un record de 0
 (`best_score.c:best_score_load`).
 
 Manifeste : `application.fam` (appid `flipper_diver`, catégorie `Games`,
-`sources=["*.c", "!tests"]`, `fap_icon_assets="images"`).
+`sources=["*.c", "!tests"]`, `fap_icon_assets="images"`). `fap_version` (X.Y)
+est la version publiée : le workflow de release exige un tag `vX.Y` égal.
+
+Livraison (`.github/workflows/`) : `build.yml`, partagé, lance les tests sur PC,
+vérifie le formatage et compile avec le SDK du dernier firmware officiel du canal
+release ; `ci.yml` le lance sur chaque push et PR ; `nightly.yml` publie chaque
+nuit la pré-release `nightly` si `master` a bougé ; `release.yml` publie la
+release d'un tag `vX.Y`. Les notes viennent de git-cliff (`cliff.toml`), qui ne
+tient compte que des tags `vX.Y`. Procédure de release : README.md.
 
 Mesures : `FLIPPER_DIVER_METRICS` à 1 dans `flipper_diver.c` consigne à chaque fin
 de manche l'écart maximal entre deux images, la latence maximale entre un appui et
@@ -154,7 +162,7 @@ son affichage, et le tas libre.
 | Aucun stratagème n'apparaît deux fois de suite, même d'une manche à l'autre | test de propriété sur 10 000 manches (`tests/test_game.c`) |
 | Écran rafraîchi au moins à 25 Hz en manche, affichage d'un appui en 40 ms au plus | timer à 30 Hz et rafraîchissement immédiat après une saisie ; mesure — **à faire sur l'appareil** |
 | Toute ressource allouée au lancement est libérée à la sortie, dans l'ordre inverse | relecture de `app_free` — **pas encore vérifié sur l'appareil** |
-| Le build `ufbt` passe sans avertissement sur le SDK release | `devenv test` (ufbt compile en `-Werror`) |
+| Le build `ufbt` passe sans avertissement sur le SDK release | `devenv test` (ufbt compile en `-Werror`) et la CI sur chaque push |
 
 ## Décisions
 
