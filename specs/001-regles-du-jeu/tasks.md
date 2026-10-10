@@ -68,6 +68,7 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   écriture sur `NewRecord`, tolérance aux fichiers absents, corrompus ou de
   version 2, et à l'absence de carte SD. — REQ-001-1 (chargement), 20, 21 —
   verify : manuel, les quatre cas de REQ-001-20 et 21.
+  *Code fait et compilé ; vérification sur l'appareil en attente.*
 - [ ] 11. Icônes : PNG 16×16 en 1 bit dans `images/` (une par stratagème),
   `fap_icon_assets="images"`, tableau `stratagem_icons[]` et `_Static_assert`
   dans `view.c`. — REQ-001-14 — verify : le build échoue si on retire une

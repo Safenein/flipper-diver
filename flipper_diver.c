@@ -4,6 +4,7 @@
 #include <input/input.h>
 #include <notification/notification_messages.h>
 
+#include "best_score.h"
 #include "game.h"
 #include "view.h"
 
@@ -122,7 +123,10 @@ static App* app_alloc(void) {
     app->queue = furi_message_queue_alloc(EVENT_QUEUE_SIZE, sizeof(AppEvent));
     app->timer = furi_timer_alloc(app_timer_callback, FuriTimerTypePeriodic, app);
     app->mutex = furi_mutex_alloc(FuriMutexTypeNormal);
-    game_init(&app->game, furi_hal_random_get(), 0, 0);
+    uint32_t best_score;
+    uint32_t best_round;
+    best_score_load(&best_score, &best_round);
+    game_init(&app->game, furi_hal_random_get(), best_score, best_round);
 
     app->view_port = view_port_alloc();
     view_port_draw_callback_set(app->view_port, app_draw_callback, app);
@@ -171,6 +175,10 @@ int32_t flipper_diver_app(void* p) {
         furi_mutex_release(app->mutex);
 
         app_notify(app, events);
+        if(events & GameEventNewRecord) {
+            /* Only this thread writes the game: no lock needed to read. */
+            best_score_save(app->game.best_score, app->game.best_round);
+        }
         if(events & GameEventQuit) {
             running = false;
         }
