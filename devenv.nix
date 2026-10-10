@@ -35,7 +35,9 @@ in {
     exec = ''
       python -m venv "${ufbtVenv}"
       "${ufbtVenv}/bin/pip" install --quiet -r ${./requirements.txt}
-      cp ${./requirements.txt} "${ufbtVenv}/requirements.txt"
+      # install, not cp: the copy from the Nix store is read-only, and cp
+      # could not overwrite it when requirements.txt changes.
+      install -m 0644 ${./requirements.txt} "${ufbtVenv}/requirements.txt"
     '';
     status = ''
       cmp -s ${./requirements.txt} "${ufbtVenv}/requirements.txt"
@@ -54,6 +56,11 @@ in {
     # Regenerates CHANGELOG.md (cliff.toml); `changelog --tag v0.2` before
     # tagging a release names the unreleased commits after it.
     changelog.exec = ''git-cliff --output "$DEVENV_ROOT/CHANGELOG.md" "$@"'';
+    # Plays a round on the Flipper over USB (app on its title screen) and
+    # captures each screen into docs/screenshots/. The venv has pyserial.
+    screenshots.exec = ''
+      cd "$DEVENV_ROOT" && "${ufbtVenv}/bin/python" tools/screenshots.py "$@"
+    '';
   };
 
   git-hooks.hooks.clang-format = {

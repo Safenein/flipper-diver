@@ -33,6 +33,11 @@ Cible : firmware officiel, canal release (ufbt), en C avec l'API Furi publique.
 - `devenv test` — tests sur PC, build ufbt et vérification du formatage.
 - `python tools/make_icons.py images` — régénère les icônes et l'icône de l'app.
 - `changelog` (= `git-cliff`, config `cliff.toml`) — régénère `CHANGELOG.md`.
+- `screenshots` — joue une manche sur le Flipper (app ouverte sur son titre) par
+  RPC USB et capture les écrans dans `docs/screenshots/` (`tools/screenshots.py`,
+  `tools/flipper_rpc.py`). `python tools/flipper_rpc.py x.png` capture l'écran
+  courant, pour vérifier un rendu sur l'appareil. Le port série ne sert qu'à un
+  processus à la fois : pas pendant `launch`.
 
 ## CI et releases
 
