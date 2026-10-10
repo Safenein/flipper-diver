@@ -9,6 +9,13 @@ Le mini-jeu des stratagèmes de Helldivers 2 (« Stratagem Hero ») sur Flipper 
 recopie au pavé directionnel la séquence de flèches de chaque stratagème avant la
 fin du chrono, pour la Super-Terre. 🫡
 
+| | | |
+|:-:|:-:|:-:|
+| ![Écran titre](docs/screenshots/titre.png) | ![Annonce de la manche](docs/screenshots/annonce.png) | ![Saisie d'un stratagème](docs/screenshots/manche.png) |
+| Titre | Annonce | Manche |
+| ![Bonus de fin de manche](docs/screenshots/fin-de-manche.png) | ![Pause](docs/screenshots/pause.png) | ![Game over](docs/screenshots/game-over.png) |
+| Fin de manche | Pause | Game over |
+
 ## 🎮 Le jeu
 
 - Chaque manche enchaîne des stratagèmes (6 + n pour la manche n, 16 au plus),
@@ -34,6 +41,8 @@ fin du chrono, pour la Super-Terre. 🫡
    ou l'app mobile.
 3. Lancer **Apps → Games → Flipper Diver**.
 
+   ![Flipper Diver dans le menu Games](docs/screenshots/menu.png)
+
 Cible : firmware officiel, canal release ; le numéro d'API du SDK utilisé est dans
 les notes de chaque release. Une app compilée pour une autre version majeure de
 l'API refuse de se lancer : prendre alors la release qui correspond, ou la
@@ -54,6 +63,7 @@ Avec [devenv](https://devenv.sh) (et direnv, ou `devenv shell`) :
 | `unit-tests` | tests de la logique de jeu sur PC, avec ASan et UBSan |
 | `fmt` | clang-format sur les sources C |
 | `changelog` | régénère `CHANGELOG.md` avec git-cliff |
+| `screenshots` | joue une manche sur le Flipper branché (app sur son titre) et capture chaque écran dans `docs/screenshots/` |
 | `devenv test` | tests, build et vérification du formatage, comme la CI |
 
 Sans devenv : `pip install -r requirements.txt`, puis `ufbt`, `ufbt launch` et
@@ -62,6 +72,11 @@ Sans devenv : `pip install -r requirements.txt`, puis `ufbt`, `ufbt launch` et
 Sous Linux, l'accès au port série du Flipper (`/dev/ttyACM0`) demande d'être dans
 le groupe `dialout`, ou les règles udev du Flipper (`hardware.flipperzero.enable`
 sous NixOS).
+
+Les captures passent par le protocole RPC du Flipper, celui qu'utilise qFlipper
+pour diffuser l'écran ([`tools/flipper_rpc.py`](tools/flipper_rpc.py)) :
+[`tools/screenshots.py`](tools/screenshots.py) lit les flèches à l'écran et les
+tape pour jouer la manche.
 
 Les icônes sont dessinées en ASCII art dans [`tools/make_icons.py`](tools/make_icons.py) :
 modifier le script, puis `python tools/make_icons.py images`.
