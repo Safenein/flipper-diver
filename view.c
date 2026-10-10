@@ -194,14 +194,19 @@ static void draw_title(Canvas* canvas, const Game* game) {
     }
 
     canvas_set_font(canvas, FontSecondary);
-    snprintf(
-        line,
-        sizeof(line),
-        "Record %lu (M%lu)",
-        (unsigned long)game->best_score,
-        (unsigned long)game->best_round);
+    if(game->best_round) {
+        snprintf(
+            line,
+            sizeof(line),
+            "Record %lu (M%lu)",
+            (unsigned long)game->best_score,
+            (unsigned long)game->best_round);
+    } else {
+        snprintf(line, sizeof(line), "Record %lu", (unsigned long)game->best_score);
+    }
     draw_center(canvas, 34, line);
-    draw_hints(canvas, "OK: jouer", "Back: quitter");
+    /* REQ-001-1 wording; Back quits from here as everywhere. */
+    canvas_draw_str_aligned(canvas, 64, 63, AlignCenter, AlignBottom, "OK pour jouer");
 }
 
 static void draw_announce(Canvas* canvas, const Game* game) {
