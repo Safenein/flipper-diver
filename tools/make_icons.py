@@ -1,6 +1,7 @@
 """Writes the app's 1-bit icons from ASCII art ('#' = black pixel).
 
-The ASCII art below is the source of images/*.png: edit it, then run
+The ASCII art below is the source of images/*.png and of the app icon
+flipper_diver.png: edit it, then run
 `python tools/make_icons.py images` in the devenv shell. Icon order in
 view.c must follow stratagems.c.
 """
@@ -420,6 +421,21 @@ UI_ICONS = {
 """,
 }
 
+# App icon in the Flipper's menus (fap_icon), 10x10: the skull of the emblem.
+APP_ICON = """
+..######..
+.########.
+##########
+#..####..#
+#..####..#
+##########
+####..####
+.########.
+..######..
+...####...
+"""
+APP_ICON_PATH = Path(__file__).resolve().parent.parent / "flipper_diver.png"
+
 SIZE = 16
 
 
@@ -467,6 +483,10 @@ def main() -> None:
         rows = parse(name, art)
         write_png(out / f"{name}_{len(rows[0])}x{len(rows)}.png", rows)
     print(f"{len(ICONS) + len(UI_ICONS)} icons written to {out}")
+    rows = parse("app", APP_ICON)
+    assert len(rows) == 10 and len(rows[0]) == 10, "app icon: not 10x10"
+    write_png(APP_ICON_PATH, rows)
+    print(f"app icon written to {APP_ICON_PATH}")
 
 
 if __name__ == "__main__":
