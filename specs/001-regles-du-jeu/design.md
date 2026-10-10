@@ -67,12 +67,14 @@ stateDiagram-v2
 ```
 
 Interface (détails dans `game.h` à l'implémentation) :
-- `game_init(Game*, uint32_t seed, uint32_t best_score, uint8_t best_round)` —
-  phase `Title`.
+- `game_init(Game*, uint32_t seed, uint32_t best_score, uint32_t best_round)` —
+  phase `Title`. Les manches et le record de manche sont des `uint32_t`.
 - `game_advance(Game*, uint32_t elapsed_ms) -> GameEvents` — fait avancer le
   temps. Toutes les durées sont des **restes en ms** décrémentés ici (chrono,
   annonce, fin de manche, flash d'erreur) ; en pause, rien n'est décrémenté, et
-  la reprise retrouve donc l'état exact (REQ-001-9, 17).
+  la reprise retrouve donc l'état exact (REQ-001-9, 17). Le temps restant quand
+  une phase se termine est reporté sur la suivante (annonce → manche, fin de
+  manche → annonce) : le résultat ne dépend pas du découpage des appels.
 - `game_key(Game*, GameKey key) -> GameEvents` — `GameKey` vaut Up, Down,
   Left, Right, Ok ou Back. Le filtrage des types d'appui (Press pour les
   flèches, Short pour OK et Back) est fait par l'app (REQ-001-5).
@@ -97,15 +99,22 @@ Règles :
   est déterministe et sans boucle de rejet.
 - La manche courante est un tableau fixe de 16 indices dans `Game`.
 - `NewRecord` est émis au passage en `GameOver` si le score dépasse strictement
-  le record ; `game.c` met alors à jour le record en mémoire (REQ-001-19).
+  le record ; `game.c` met alors à jour le record en mémoire et lève
+  `Game.new_record`, remis à faux à la partie suivante, pour l'écran de game
+  over (REQ-001-19).
+- Le flash d'erreur ne s'écoule pas en pause, comme les autres durées.
 
 ### Table des stratagèmes `stratagems.c` (REQ-001-14, 15)
 
-`static const` en flash : nom (`const char*`), séquence (`uint8_t[8]`), longueur.
-Pas d'icône dans cette table, pour qu'elle reste pure. `view.c` déclare un
-tableau `const Icon* const stratagem_icons[]` dans le même ordre, et un
-`_Static_assert` sur les tailles fait échouer le build s'il manque une icône
-(REQ-001-14). Claude rédige la table ; l'utilisateur valide les séquences.
+`static const` en flash : nom (`const char*`) et séquence en lettres `U`, `D`,
+`L`, `R` (`const char*`, lisible pour la relecture) ; `stratagem_length` et
+`stratagem_arrow` la décodent. Pas d'icône dans cette table, pour qu'elle reste
+pure. `view.c` déclare un tableau `const Icon* const stratagem_icons[]` dans le
+même ordre, et un `_Static_assert` sur les tailles fait échouer le build s'il
+manque une icône (REQ-001-14). Il ne vérifie que le nombre : une permutation
+des lignes passerait, d'où une entrée par ligne dans les deux tables et les
+noms d'icônes calqués sur ceux des stratagèmes. Claude rédige la table ;
+l'utilisateur valide les séquences.
 
 ### Rendu `view.c` (REQ-001-1, 12, 13, 16, 19)
 
@@ -117,7 +126,7 @@ de l'écran de manche (en pixels, 128×64) :
 | Rangée d'icônes | 0–19 | 5 emplacements de 16 px espacés de 24 px, centrés ; l'actif au centre (x = 56) encadré par un rectangle de 20×20 ; les réussis barrés d'une croix |
 | Nom | 22–31 | `FontSecondary`, centré |
 | Flèches | 34–45 | 8 flèches de 12 px au plus, pas de 14 px, centrées ; pleines si saisies, creuses sinon |
-| Bas | 52–63 | jauge de 72×6 px à gauche, « M3 » et score à droite (`FontSecondary`) |
+| Bas | 55–63 | jauge de 72×7 px (cadre) à gauche, « M3 1250 » aligné à droite (`FontSecondary`) ; il reste 55 px, soit 11 caractères environ |
 
 - Les flèches sont dessinées avec des primitives (triangles et rectangles à
   partir de `canvas_draw_line` et `canvas_draw_box`), pas avec des icônes, pour
@@ -158,18 +167,24 @@ de l'écran de manche (en pixels, 128×64) :
   `RoundEnd` et qu'aucun rendu n'a eu lieu depuis plus de 250 ms, l'app appelle
   `game_pause`. **À vérifier sur l'appareil** : si la GUI appelle quand même le
   callback d'un ViewPort masqué, REQ-001-18 sera barrée avec l'accord de
-  l'utilisateur.
+  l'utilisateur. Limite connue : le chrono continue de tourner pendant les
+  250 ms de détection, donc il n'est inchangé qu'à 250 ms près à la reprise.
+- Mesures (REQ-001-24, 25) : `FLIPPER_DIVER_METRICS` consigne le tas libre au
+  début de la partie, puis à chaque fin de manche et au game over l'écart
+  maximal entre deux images et la latence maximale entre un appui et son image.
+- Pile du thread de l'app : 4 Kio, car il écrit le record (FlipperFormat).
 - Sortie : sur `Quit`, libération dans l'ordre inverse de l'allocation (timer
   arrêté et libéré avant la file).
 
 ### Record `best_score.c` (REQ-001-1, 20, 21)
 
-- `best_score_load(Storage*, uint32_t* score, uint8_t* round) -> bool` : ouvre
+- `best_score_load(uint32_t* score, uint32_t* round) -> bool` : ouvre le
+  stockage (`RECORD_STORAGE`) le temps de l'appel, puis
   `APP_DATA_PATH("best.fff")` (qui correspond à
   `/ext/apps_data/flipper_diver/best.fff`), vérifie l'en-tête
   `Filetype: Flipper Diver Best Score` et `Version: 1`, puis lit `Score` et
   `Round`. Tout échec renvoie `false` et un record de 0.
-- `best_score_save(Storage*, uint32_t score, uint8_t round) -> bool` :
+- `best_score_save(uint32_t score, uint32_t round) -> bool` :
   `flipper_format_file_open_always`, puis l'en-tête et les deux valeurs. Un échec
   est consigné avec `FURI_LOG_E` et n'interrompt pas le jeu.
 - Appelée seulement quand `game_*` renvoie `NewRecord` (REQ-001-20).
@@ -181,9 +196,10 @@ de l'écran de manche (en pixels, 128×64) :
 ### Manifeste `application.fam`
 
 - `fap_icon_assets="images"` : génère `flipper_diver_icons.h` (REQ-001-14).
-- `sources=["*.c*", "!tests"]` : ufbt collecte les sources récursivement
+- `sources=["*.c", "!tests"]` : ufbt collecte les sources récursivement
   (`GatherSources` avec exclusions), et ceci exclut `tests/` du FAP
-  (REQ-001-23).
+  (REQ-001-23). Pas de `*.c*` (valeur par défaut) : ce motif attrape aussi les
+  caches Python `*.cpython-*.pyc` de `tools/`.
 
 ### Tests sur PC (REQ-001-23)
 

@@ -14,7 +14,8 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
 - [x] 1. Harnais de tests sur PC : `tests/test.h` (macros `CHECK`, code de sortie),
   un premier test trivial, un script devenv `unit-tests` (gnu17, mêmes
   avertissements qu'ufbt, ASan et UBSan) appelé par `enterTest`, et
-  `sources=["*.c*", "!tests"]` dans `application.fam`. — REQ-001-23 — verify :
+  `sources=["*.c", "!tests"]` dans `application.fam` (d'abord `*.c*`,
+  restreint ensuite : voir design.md). — REQ-001-23 — verify :
   `devenv test` échoue si on casse le test exprès ;
   `nm dist/debug/flipper_diver_d.elf | grep test_` ne trouve rien (le `nm` du
   PC lit l'ELF ARM).
