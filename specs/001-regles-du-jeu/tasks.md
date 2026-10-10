@@ -32,7 +32,7 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   flèches sont ignorées ; composition de manche min(6 + n, 16) avec xorshift32
   et décalage anti-doublon. — REQ-001-2, 3, 4 — verify : tests de taille des
   manches 1, 5, 10 et 25 ; test de propriété sur 10 000 manches à graine fixe.
-- [ ] 4. Saisie et chrono : flèche correcte, erreur (remise à zéro, manche non
+- [x] 4. Saisie et chrono : flèche correcte, erreur (remise à zéro, manche non
   parfaite, chrono intact), stratagème réussi (+5 par flèche, +1,5 s plafonnées
   à 10 s), décompte, game over à 0, saisie ignorée après le game over. —
   REQ-001-6, 7, 8, 9, 10 — verify : un test par critère d'acceptation de ces

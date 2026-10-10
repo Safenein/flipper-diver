@@ -40,6 +40,46 @@ static void start_round(Game* game, uint32_t round) {
     game->phase_ms = GAME_ANNOUNCE_MS;
 }
 
+static GameEvents game_over(Game* game) {
+    game->phase = GamePhaseGameOver;
+    return GameEventGameOver;
+}
+
+_Static_assert(
+    (int)GameKeyUp == (int)StratagemArrowUp && (int)GameKeyDown == (int)StratagemArrowDown &&
+        (int)GameKeyLeft == (int)StratagemArrowLeft &&
+        (int)GameKeyRight == (int)StratagemArrowRight,
+    "arrow keys must map one to one onto stratagem arrows");
+
+static GameEvents enter_arrow(Game* game, GameKey key) {
+    if(game->current >= game->round_size) {
+        return GameEventNone;
+    }
+    const Stratagem* stratagem = &stratagems[game->round_stratagems[game->current]];
+
+    if(stratagem_arrow(stratagem, game->progress) != (StratagemArrow)key) {
+        game->progress = 0;
+        game->perfect = false;
+        game->flash_ms = GAME_ERROR_FLASH_MS;
+        return GameEventError;
+    }
+
+    game->progress++;
+    size_t length = stratagem_length(stratagem);
+    if(game->progress < length) {
+        return GameEventArrowOk;
+    }
+
+    game->score += GAME_POINTS_PER_ARROW * (uint32_t)length;
+    game->timer_ms += GAME_TIMER_REFILL_MS;
+    if(game->timer_ms > GAME_TIMER_MAX_MS) {
+        game->timer_ms = GAME_TIMER_MAX_MS;
+    }
+    game->current++;
+    game->progress = 0;
+    return GameEventArrowOk | GameEventStratagemDone;
+}
+
 static void start_game(Game* game) {
     game->score = 0;
     game->round_bonus = 0;
@@ -82,6 +122,10 @@ const Stratagem* game_current_stratagem(const Game* game) {
 GameEvents game_advance(Game* game, uint32_t elapsed_ms) {
     GameEvents events = GameEventNone;
 
+    if(game->phase != GamePhasePaused) {
+        game->flash_ms = elapsed_ms < game->flash_ms ? game->flash_ms - elapsed_ms : 0;
+    }
+
     /* Loops so that time left over when a phase ends carries into the next
      * one: the result does not depend on how the caller slices time. */
     while(elapsed_ms > 0) {
@@ -93,6 +137,14 @@ GameEvents game_advance(Game* game, uint32_t elapsed_ms) {
             elapsed_ms -= game->phase_ms;
             game->phase_ms = 0;
             game->phase = GamePhasePlaying;
+        } else if(game->phase == GamePhasePlaying) {
+            if(elapsed_ms < game->timer_ms) {
+                game->timer_ms -= elapsed_ms;
+                break;
+            }
+            game->timer_ms = 0;
+            events |= game_over(game);
+            break;
         } else {
             break;
         }
@@ -112,6 +164,11 @@ GameEvents game_key(Game* game, GameKey key) {
         break;
     case GamePhaseAnnounce:
         /* Arrows are ignored until the first stratagem shows. */
+        break;
+    case GamePhasePlaying:
+        if(key <= GameKeyRight) {
+            return enter_arrow(game, key);
+        }
         break;
     default:
         break;
