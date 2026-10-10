@@ -22,7 +22,8 @@ Cible : firmware officiel, canal release (ufbt), en C avec l'API Furi publique.
 
 Dépôt jj colocalisé avec git : utiliser `jj` (jamais `git add`/`git commit`).
 Les hooks pre-commit de devenv ne tournent pas sur `jj commit` : lancer
-`prek run -a` (ou `fmt`) avant de committer.
+`jj fix` avant de committer. Il applique clang-format aux `*.c`/`*.h`
+(configuré dans la config jj du dépôt, hors du dépôt : `jj config list --repo`).
 
 ## Pièges
 
