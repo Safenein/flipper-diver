@@ -100,6 +100,8 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   rendu, tas libre au début et à la fin d'une partie. — REQ-001-24, 25 —
   verify : manuel, rendus ≤ 40 ms d'écart, latence ≤ 40 ms, tas identique
   après 5 manches.
+  *Code fait (`FLIPPER_DIVER_METRICS` dans `flipper_diver.c`, logs à chaque
+  fin de manche et au game over) ; mesures sur l'appareil en attente.*
 
 ## Clôture
 

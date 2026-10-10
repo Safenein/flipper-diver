@@ -16,6 +16,11 @@
 /* No redraw for this long while a round runs: the screen is taken. */
 #define SCREEN_LOST_MS   250
 
+/* Set to 1 to log, at each round end and game over, the longest gap between
+ * two frames during the round, the longest delay between a key press and
+ * the frame showing it, and the free heap (REQ-001-24, 25). */
+#define FLIPPER_DIVER_METRICS 0
+
 typedef enum {
     AppEventTypeInput,
     AppEventTypeTick,
@@ -24,7 +29,14 @@ typedef enum {
 typedef struct {
     AppEventType type;
     InputEvent input;
+    uint32_t tick; /* furi_get_tick() when the input arrived */
 } AppEvent;
+
+typedef struct {
+    uint32_t input_tick; /* key press waiting for its frame, 0 if none */
+    uint32_t max_frame_gap;
+    uint32_t max_input_latency;
+} AppMetrics;
 
 typedef struct {
     FuriMessageQueue* queue;
@@ -38,7 +50,55 @@ typedef struct {
 
     uint32_t last_tick; /* main thread only */
     uint32_t last_draw_tick; /* protected by mutex, written by the GUI thread */
+    AppMetrics metrics; /* protected by mutex */
 } App;
+
+static uint32_t ticks_to_ms(uint32_t ticks) {
+    return (uint32_t)((uint64_t)ticks * 1000u / furi_kernel_get_tick_frequency());
+}
+
+/* Called with the lock held, from the draw callback. */
+static void app_metrics_on_draw(App* app, uint32_t now) {
+    if(!FLIPPER_DIVER_METRICS) {
+        return;
+    }
+    AppMetrics* metrics = &app->metrics;
+    if(app->game.phase == GamePhasePlaying) {
+        uint32_t gap = ticks_to_ms(now - app->last_draw_tick);
+        if(gap > metrics->max_frame_gap) {
+            metrics->max_frame_gap = gap;
+        }
+    }
+    if(metrics->input_tick) {
+        uint32_t latency = ticks_to_ms(now - metrics->input_tick);
+        if(latency > metrics->max_input_latency) {
+            metrics->max_input_latency = latency;
+        }
+        metrics->input_tick = 0;
+    }
+}
+
+/* Called with the lock held, from the main loop. */
+static void app_metrics_on_events(App* app, const AppEvent* event, GameEvents events) {
+    if(!FLIPPER_DIVER_METRICS) {
+        return;
+    }
+    AppMetrics* metrics = &app->metrics;
+    if(event->type == AppEventTypeInput && (events & (GameEventArrowOk | GameEventError))) {
+        metrics->input_tick = event->tick ? event->tick : 1;
+    }
+    if(events & (GameEventRoundDone | GameEventGameOver)) {
+        FURI_LOG_I(
+            TAG,
+            "metrics: round %lu, max frame gap %lu ms, max input latency %lu ms, free heap %zu",
+            (unsigned long)app->game.round,
+            (unsigned long)metrics->max_frame_gap,
+            (unsigned long)metrics->max_input_latency,
+            memmgr_get_free_heap());
+        metrics->max_frame_gap = 0;
+        metrics->max_input_latency = 0;
+    }
+}
 
 /* Wrong arrow: short vibration and red LED (REQ-001-7). Like every sequence
  * here, it goes through the notification service, which applies the
@@ -69,13 +129,15 @@ static void app_draw_callback(Canvas* canvas, void* ctx) {
     App* app = ctx;
     furi_check(furi_mutex_acquire(app->mutex, FuriWaitForever) == FuriStatusOk);
     view_draw(canvas, &app->game);
-    app->last_draw_tick = furi_get_tick();
+    uint32_t now = furi_get_tick();
+    app_metrics_on_draw(app, now);
+    app->last_draw_tick = now;
     furi_mutex_release(app->mutex);
 }
 
 static void app_input_callback(InputEvent* input, void* ctx) {
     App* app = ctx;
-    AppEvent event = {.type = AppEventTypeInput, .input = *input};
+    AppEvent event = {.type = AppEventTypeInput, .input = *input, .tick = furi_get_tick()};
     /* Input thread: never block it, drop the event if the queue is full. */
     furi_message_queue_put(app->queue, &event, 0);
 }
@@ -119,7 +181,7 @@ static uint32_t app_elapsed_ms(App* app) {
     uint32_t now = furi_get_tick();
     uint32_t ticks = now - app->last_tick;
     app->last_tick = now;
-    return (uint32_t)((uint64_t)ticks * 1000u / furi_kernel_get_tick_frequency());
+    return ticks_to_ms(ticks);
 }
 
 static App* app_alloc(void) {
@@ -184,6 +246,7 @@ int32_t flipper_diver_app(void* p) {
         if(event.type == AppEventTypeInput && app_game_key(&event.input, &key)) {
             events |= game_key(&app->game, key);
         }
+        app_metrics_on_events(app, &event, events);
         furi_mutex_release(app->mutex);
 
         app_notify(app, events);
