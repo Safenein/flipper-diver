@@ -27,7 +27,7 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
 
 ## Règles (`game.c`, sans Furi)
 
-- [ ] 3. Squelette de `game.h/.c` : phases, `game_init`, `game_advance`,
+- [x] 3. Squelette de `game.h/.c` : phases, `game_init`, `game_advance`,
   `game_key`, `GameEvents` ; titre → annonce de 1,5 s pendant laquelle les
   flèches sont ignorées ; composition de manche min(6 + n, 16) avec xorshift32
   et décalage anti-doublon. — REQ-001-2, 3, 4 — verify : tests de taille des

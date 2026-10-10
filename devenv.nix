@@ -22,7 +22,7 @@
   };
 
   # Furi-free sources linked into every host test (ADR-0004).
-  pureSources = "stratagems.c";
+  pureSources = "stratagems.c game.c";
 in {
   languages.c = {
     enable = true;
