@@ -63,6 +63,7 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   `sequence_blink_green_10`, `sequence_success`, `sequence_error`. —
   REQ-001-7 (retour), REQ-001-22 — verify : manuel, y compris avec la
   vibration coupée dans les réglages du Flipper.
+  *Code fait et compilé ; vérification sur l'appareil en attente.*
 - [ ] 10. Record sur la carte SD `best_score.h/.c` : chargement au démarrage,
   écriture sur `NewRecord`, tolérance aux fichiers absents, corrompus ou de
   version 2, et à l'absence de carte SD. — REQ-001-1 (chargement), 20, 21 —

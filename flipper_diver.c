@@ -2,6 +2,7 @@
 #include <furi_hal_random.h>
 #include <gui/gui.h>
 #include <input/input.h>
+#include <notification/notification_messages.h>
 
 #include "game.h"
 #include "view.h"
@@ -27,12 +28,38 @@ typedef struct {
     FuriTimer* timer;
     ViewPort* view_port;
     Gui* gui;
+    NotificationApp* notifications;
 
     FuriMutex* mutex; /* protects game, read by the GUI thread */
     Game game;
 
     uint32_t last_tick; /* main thread only */
 } App;
+
+/* Wrong arrow: short vibration and red LED (REQ-001-7). Like every sequence
+ * here, it goes through the notification service, which applies the
+ * Flipper's vibration and LED settings (REQ-001-22). */
+static const NotificationSequence sequence_wrong_arrow = {
+    &message_vibro_on,
+    &message_red_255,
+    &message_delay_100,
+    &message_vibro_off,
+    &message_red_0,
+    NULL,
+};
+
+static void app_notify(App* app, GameEvents events) {
+    if(events & GameEventError) {
+        notification_message(app->notifications, &sequence_wrong_arrow);
+    }
+    if(events & GameEventGameOver) {
+        notification_message(app->notifications, &sequence_error);
+    } else if(events & GameEventRoundDone) {
+        notification_message(app->notifications, &sequence_success);
+    } else if(events & GameEventStratagemDone) {
+        notification_message(app->notifications, &sequence_blink_green_10);
+    }
+}
 
 static void app_draw_callback(Canvas* canvas, void* ctx) {
     App* app = ctx;
@@ -102,6 +129,7 @@ static App* app_alloc(void) {
     view_port_input_callback_set(app->view_port, app_input_callback, app);
     app->gui = furi_record_open(RECORD_GUI);
     gui_add_view_port(app->gui, app->view_port, GuiLayerFullscreen);
+    app->notifications = furi_record_open(RECORD_NOTIFICATION);
 
     app->last_tick = furi_get_tick();
     furi_timer_start(app->timer, furi_ms_to_ticks(TICK_PERIOD_MS));
@@ -110,6 +138,7 @@ static App* app_alloc(void) {
 
 static void app_free(App* app) {
     furi_timer_stop(app->timer);
+    furi_record_close(RECORD_NOTIFICATION);
     view_port_enabled_set(app->view_port, false);
     gui_remove_view_port(app->gui, app->view_port);
     furi_record_close(RECORD_GUI);
@@ -141,6 +170,7 @@ int32_t flipper_diver_app(void* p) {
         }
         furi_mutex_release(app->mutex);
 
+        app_notify(app, events);
         if(events & GameEventQuit) {
             running = false;
         }
