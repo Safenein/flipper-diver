@@ -62,7 +62,7 @@ flowchart LR
 | `view.c`, `view.h` | Rendu de chaque phase, table des icônes | oui |
 | `best_score.c`, `best_score.h` | Lecture et écriture du record | oui |
 | `flipper_diver.c` | Point d'entrée, file d'événements, timer, notifications, détection de perte d'écran | oui |
-| `tools/make_icons.py` | Source ASCII des icônes `images/*.png` (stratagèmes, bannière, touches) | — |
+| `tools/make_icons.py` | Source ASCII des icônes `images/*.png` (stratagèmes, crâne, touches) | — |
 | `tests/` | Tests unitaires sur PC (`unit-tests`), hors du FAP | non |
 
 - **Callbacks d'entrée et de timer** (`flipper_diver.c:app_input_callback`,

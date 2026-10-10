@@ -220,17 +220,18 @@ static void draw_hints(Canvas* canvas, const char* ok, const char* back) {
     draw_key_hint(canvas, KeyHintRight, &I_button_ok_7x7, ok);
 }
 
-#define BANNER_W 16
+#define SKULL_W 16
+#define SKULL_Y 9
 
-/* Helldivers banners hanging on both sides (title and game over). */
-static void draw_banners(Canvas* canvas) {
-    canvas_draw_icon(canvas, 0, 0, &I_banner_16x37);
-    canvas_draw_icon(canvas, 128 - BANNER_W, 0, &I_banner_16x37);
+/* Skull of the Helldivers logo on both sides (title and game over). */
+static void draw_skulls(Canvas* canvas) {
+    canvas_draw_icon(canvas, 0, SKULL_Y, &I_skull_16x20);
+    canvas_draw_icon(canvas, 128 - SKULL_W, SKULL_Y, &I_skull_16x20);
 }
 
 static void draw_title(Canvas* canvas, const Game* game) {
     char line[40];
-    draw_banners(canvas);
+    draw_skulls(canvas);
     canvas_set_font(canvas, FontPrimary);
     draw_center(canvas, 2, "FLIPPER DIVER");
 
@@ -331,10 +332,10 @@ static void draw_paused(Canvas* canvas, const Game* game) {
 
 static void draw_game_over(Canvas* canvas, const Game* game) {
     char line[40];
-    draw_banners(canvas);
+    draw_skulls(canvas);
     canvas_set_font(canvas, FontPrimary);
     draw_center(canvas, 1, "GAME OVER");
-    /* Score, round and record on 3 lines: between the banners, a single
+    /* Score, round and record on 3 lines: between the skulls, a single
      * line « Score N  Manche N » would not fit. */
     canvas_set_font(canvas, FontSecondary);
     snprintf(line, sizeof(line), "Score %lu", (unsigned long)game->score);
@@ -349,7 +350,7 @@ static void draw_game_over(Canvas* canvas, const Game* game) {
         (unsigned long)game->best_round);
     draw_center(canvas, 29, line);
     if(game->new_record) {
-        /* Inverted strip, sized to the text, below the banners. */
+        /* Inverted strip, sized to the text, below the skulls. */
         const char* text = "NOUVEAU RECORD !";
         canvas_set_font(canvas, FontPrimary);
         int32_t width = canvas_string_width(canvas, text) + 2 * NEW_RECORD_PAD;
