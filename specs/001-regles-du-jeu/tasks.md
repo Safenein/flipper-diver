@@ -37,7 +37,7 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   à 10 s), décompte, game over à 0, saisie ignorée après le game over. —
   REQ-001-6, 7, 8, 9, 10 — verify : un test par critère d'acceptation de ces
   REQ (valeurs reprises telles quelles).
-- [ ] 5. Fin de manche : bonus de manche, de temps (après recharge) et parfait ;
+- [x] 5. Fin de manche : bonus de manche, de temps (après recharge) et parfait ;
   phase `RoundEnd` de 3 s ou OK, puis annonce de la manche suivante. —
   REQ-001-11, 12 (logique) — verify : tests « manche 3, 4 567 ms, sans erreur →
   +125, +45, +100 » et « manche 1 avec erreur, 10 000 ms → +75, +100 ».

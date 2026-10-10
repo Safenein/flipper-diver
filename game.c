@@ -40,6 +40,20 @@ static void start_round(Game* game, uint32_t round) {
     game->phase_ms = GAME_ANNOUNCE_MS;
 }
 
+/* Called once the last stratagem of the round is done, after its refill. */
+static GameEvents finish_round(Game* game) {
+    game->round_bonus = GAME_ROUND_BONUS_BASE + GAME_ROUND_BONUS_STEP * (game->round - 1);
+    game->time_bonus = game->timer_ms / 100u;
+    if(game->time_bonus > GAME_TIME_BONUS_MAX) {
+        game->time_bonus = GAME_TIME_BONUS_MAX;
+    }
+    game->perfect_bonus = game->perfect ? GAME_PERFECT_BONUS : 0;
+    game->score += game->round_bonus + game->time_bonus + game->perfect_bonus;
+    game->phase = GamePhaseRoundEnd;
+    game->phase_ms = GAME_ROUND_END_MS;
+    return GameEventRoundDone;
+}
+
 static GameEvents game_over(Game* game) {
     game->phase = GamePhaseGameOver;
     return GameEventGameOver;
@@ -77,7 +91,11 @@ static GameEvents enter_arrow(Game* game, GameKey key) {
     }
     game->current++;
     game->progress = 0;
-    return GameEventArrowOk | GameEventStratagemDone;
+    GameEvents events = GameEventArrowOk | GameEventStratagemDone;
+    if(game->current == game->round_size) {
+        events |= finish_round(game);
+    }
+    return events;
 }
 
 static void start_game(Game* game) {
@@ -145,6 +163,13 @@ GameEvents game_advance(Game* game, uint32_t elapsed_ms) {
             game->timer_ms = 0;
             events |= game_over(game);
             break;
+        } else if(game->phase == GamePhaseRoundEnd) {
+            if(elapsed_ms < game->phase_ms) {
+                game->phase_ms -= elapsed_ms;
+                break;
+            }
+            elapsed_ms -= game->phase_ms;
+            start_round(game, game->round + 1);
         } else {
             break;
         }
@@ -168,6 +193,11 @@ GameEvents game_key(Game* game, GameKey key) {
     case GamePhasePlaying:
         if(key <= GameKeyRight) {
             return enter_arrow(game, key);
+        }
+        break;
+    case GamePhaseRoundEnd:
+        if(key == GameKeyOk) {
+            start_round(game, game->round + 1);
         }
         break;
     default:

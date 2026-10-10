@@ -226,6 +226,89 @@ static void test_timer_zero_is_game_over(void) {
     CHECK_EQ(game.score, 0);
 }
 
+/* Puts the game on the last stratagem of round n, playing. */
+static void last_stratagem_of_round(Game* game, uint32_t round) {
+    start_playing(game);
+    game->round = round;
+    game->round_size = game_round_size(round);
+    game->current = game->round_size - 1;
+}
+
+/* REQ-001-11: round 3, no error, 4 567 ms left after the last refill. */
+static void test_round_bonuses_perfect(void) {
+    Game game;
+    last_stratagem_of_round(&game, 3);
+    force_current(&game, "Resupply"); /* 4 arrows: 20 points */
+    game.timer_ms = 4567 - GAME_TIMER_REFILL_MS;
+    GameEvents events = complete_current(&game);
+    CHECK(events & GameEventRoundDone);
+    CHECK_EQ(game.round_bonus, 125);
+    CHECK_EQ(game.time_bonus, 45);
+    CHECK_EQ(game.perfect_bonus, 100);
+    CHECK_EQ(game.score, 20 + 125 + 45 + 100);
+    CHECK_EQ(game.phase, GamePhaseRoundEnd);
+}
+
+/* REQ-001-11: round 1 with an error, 10 000 ms left. */
+static void test_round_bonuses_with_error(void) {
+    Game game;
+    last_stratagem_of_round(&game, 1);
+    force_current(&game, "Resupply");
+    type(&game, "U"); /* error */
+    complete_current(&game);
+    CHECK_EQ(game.round_bonus, 75);
+    CHECK_EQ(game.time_bonus, 100);
+    CHECK_EQ(game.perfect_bonus, 0);
+}
+
+/* REQ-001-12: next round announce after 3 s, or at once with Ok. */
+static void test_round_end_lasts_3_s(void) {
+    Game game;
+    last_stratagem_of_round(&game, 1);
+    complete_current(&game);
+    game_advance(&game, GAME_ROUND_END_MS - 1);
+    CHECK_EQ(game.phase, GamePhaseRoundEnd);
+    game_advance(&game, 1);
+    CHECK_EQ(game.phase, GamePhaseAnnounce);
+    CHECK_EQ(game.round, 2);
+    CHECK_EQ(game.round_size, 8);
+    CHECK_EQ(game.timer_ms, 10000);
+    CHECK(game.perfect);
+}
+
+static void test_round_end_ok_skips_wait(void) {
+    Game game;
+    last_stratagem_of_round(&game, 1);
+    complete_current(&game);
+    game_key(&game, GameKeyOk);
+    CHECK_EQ(game.phase, GamePhaseAnnounce);
+    CHECK_EQ(game.round, 2);
+}
+
+/* REQ-001-4, across rounds: 10 000 rounds played through, no stratagem
+ * follows itself, including from one round to the next. */
+static void test_no_consecutive_repeat_over_10000_rounds(void) {
+    Game game;
+    start(&game);
+    int previous = -1;
+    for(uint32_t round = 1; round <= 10000; round++) {
+        CHECK_EQ(game.round, round);
+        CHECK_EQ(game.round_size, game_round_size(round));
+        game_advance(&game, GAME_ANNOUNCE_MS);
+        for(uint8_t i = 0; i < game.round_size; i++) {
+            int index = game.round_stratagems[i];
+            CHECK(index != previous);
+            previous = index;
+            complete_current(&game);
+        }
+        CHECK_EQ(game.phase, GamePhaseRoundEnd);
+        game_key(&game, GameKeyOk);
+        if(test_failures) {
+            break;
+        }
+    }
+}
+
 int main(void) {
     RUN_TEST(test_init_shows_title_with_record);
     RUN_TEST(test_title_ok_starts_round_1_with_score_0);
@@ -243,5 +326,10 @@ int main(void) {
     RUN_TEST(test_timer_counts_down);
     RUN_TEST(test_announce_overflow_carries_into_timer);
     RUN_TEST(test_timer_zero_is_game_over);
+    RUN_TEST(test_round_bonuses_perfect);
+    RUN_TEST(test_round_bonuses_with_error);
+    RUN_TEST(test_round_end_lasts_3_s);
+    RUN_TEST(test_round_end_ok_skips_wait);
+    RUN_TEST(test_no_consecutive_repeat_over_10000_rounds);
     return test_report();
 }
