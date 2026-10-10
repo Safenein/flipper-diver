@@ -78,12 +78,21 @@ static void app_metrics_on_draw(App* app, uint32_t now) {
     }
 }
 
-/* Called with the lock held, from the main loop. */
-static void app_metrics_on_events(App* app, const AppEvent* event, GameEvents events) {
+/* Called with the lock held, from the main loop; phase_before is the phase
+ * before this event was applied. */
+static void app_metrics_on_events(
+    App* app,
+    const AppEvent* event,
+    GameEvents events,
+    GamePhase phase_before) {
     if(!FLIPPER_DIVER_METRICS) {
         return;
     }
     AppMetrics* metrics = &app->metrics;
+    if(phase_before == GamePhaseTitle && app->game.phase == GamePhaseAnnounce) {
+        /* Baseline for REQ-001-25: compare with the round end logs. */
+        FURI_LOG_I(TAG, "metrics: game start, free heap %zu", memmgr_get_free_heap());
+    }
     if(event->type == AppEventTypeInput && (events & (GameEventArrowOk | GameEventError))) {
         metrics->input_tick = event->tick ? event->tick : 1;
     }
@@ -233,7 +242,7 @@ int32_t flipper_diver_app(void* p) {
         }
 
         furi_check(furi_mutex_acquire(app->mutex, FuriWaitForever) == FuriStatusOk);
-        /* The timer is brought up to date before any key (design.md). */
+        GamePhase phase_before = app->game.phase;
         /* The GUI only calls the draw callback of the visible ViewPort: no
          * redraw although we keep asking for one means another ViewPort
          * covers ours, so the round pauses (REQ-001-18, design.md). */
@@ -241,12 +250,13 @@ int32_t flipper_diver_app(void* p) {
            furi_get_tick() - app->last_draw_tick > furi_ms_to_ticks(SCREEN_LOST_MS)) {
             game_pause(&app->game);
         }
+        /* The timer is brought up to date before any key (design.md). */
         GameEvents events = game_advance(&app->game, app_elapsed_ms(app));
         GameKey key;
         if(event.type == AppEventTypeInput && app_game_key(&event.input, &key)) {
             events |= game_key(&app->game, key);
         }
-        app_metrics_on_events(app, &event, events);
+        app_metrics_on_events(app, &event, events, phase_before);
         furi_mutex_release(app->mutex);
 
         app_notify(app, events);
