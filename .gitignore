@@ -17,6 +17,6 @@ devenv.local.yaml
 dist/
 .ufbt/
 .vscode/
-.clangd
+/.clangd
 compile_commands.json
 *.fap
