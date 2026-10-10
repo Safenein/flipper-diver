@@ -109,3 +109,6 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   (touches, fichier de record), données (table, record), invariants ; retirer
   les questions ouvertes résolues ; passer cette spec en `implemented`. —
   verify : rapport de l'agent spec-keeper sans écart.
+  *Spec système synchronisée avec le code ; le passage en `implemented` attend
+  les vérifications sur l'appareil des tâches 8 à 15 et la validation des
+  séquences.*
