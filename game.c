@@ -59,6 +59,7 @@ static GameEvents game_over(Game* game) {
     if(game->score > game->best_score) {
         game->best_score = game->score;
         game->best_round = game->round;
+        game->new_record = true;
         return GameEventGameOver | GameEventNewRecord;
     }
     return GameEventGameOver;
@@ -105,6 +106,7 @@ static GameEvents enter_arrow(Game* game, GameKey key) {
 
 static void start_game(Game* game) {
     game->score = 0;
+    game->new_record = false;
     game->round_bonus = 0;
     game->time_bonus = 0;
     game->perfect_bonus = 0;

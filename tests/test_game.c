@@ -388,6 +388,7 @@ static void test_equal_score_is_not_a_record(void) {
     CHECK_EQ(game_over_with(&game, 1000, 1000), GameEventGameOver);
     CHECK_EQ(game.best_score, 1000);
     CHECK_EQ(game.best_round, 3);
+    CHECK(!game.new_record);
 }
 
 static void test_higher_score_is_a_new_record(void) {
@@ -395,6 +396,11 @@ static void test_higher_score_is_a_new_record(void) {
     CHECK_EQ(game_over_with(&game, 1001, 1000), GameEventGameOver | GameEventNewRecord);
     CHECK_EQ(game.best_score, 1001);
     CHECK_EQ(game.best_round, 1);
+    CHECK(game.new_record);
+    /* Cleared by the next game. */
+    game_key(&game, GameKeyOk);
+    game_key(&game, GameKeyOk);
+    CHECK(!game.new_record);
 }
 
 static void test_game_over_ok_returns_to_title(void) {

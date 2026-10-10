@@ -4,8 +4,8 @@
 
 #include "flipper_diver_icons.h"
 
-/* Provisional text rendering (task 8 of specs/001-regles-du-jeu); tasks 12
- * and 13 replace it with the final screens. */
+/* Screens of specs/001-regles-du-jeu/design.md (« Rendu »). Texts are
+ * kept ASCII: the built-in fonts have no accented letters. */
 
 /* One 16x16 icon per stratagem, in the order of stratagems[] (stratagems.c).
  * Sources: tools/make_icons.py. One entry per line, like stratagems.c. */
@@ -41,21 +41,6 @@ _Static_assert(
 
 static void draw_center(Canvas* canvas, int32_t y, const char* text) {
     canvas_draw_str_aligned(canvas, 64, y, AlignCenter, AlignTop, text);
-}
-
-static void draw_title(Canvas* canvas, const Game* game) {
-    char line[32];
-    canvas_set_font(canvas, FontPrimary);
-    draw_center(canvas, 4, "Flipper Diver");
-    canvas_set_font(canvas, FontSecondary);
-    snprintf(
-        line,
-        sizeof(line),
-        "Record: %lu (M%lu)",
-        (unsigned long)game->best_score,
-        (unsigned long)game->best_round);
-    draw_center(canvas, 26, line);
-    draw_center(canvas, 50, "OK pour jouer");
 }
 
 /* Round screen layout (design.md, « Rendu »), in pixels. */
@@ -188,51 +173,143 @@ static void draw_playing(Canvas* canvas, const Game* game) {
     }
 }
 
-static void draw_round_end(Canvas* canvas, const Game* game) {
-    char line[32];
-    canvas_set_font(canvas, FontPrimary);
-    snprintf(line, sizeof(line), "Manche %lu finie", (unsigned long)game->round);
-    draw_center(canvas, 2, line);
+/* Footer line with the two key hints (Ok on the left, Back on the right). */
+static void draw_hints(Canvas* canvas, const char* ok, const char* back) {
     canvas_set_font(canvas, FontSecondary);
-    snprintf(line, sizeof(line), "Manche +%lu", (unsigned long)game->round_bonus);
-    draw_center(canvas, 18, line);
-    snprintf(line, sizeof(line), "Temps +%lu", (unsigned long)game->time_bonus);
-    draw_center(canvas, 28, line);
-    snprintf(line, sizeof(line), "Parfait +%lu", (unsigned long)game->perfect_bonus);
-    draw_center(canvas, 38, line);
-    snprintf(line, sizeof(line), "Score %lu", (unsigned long)game->score);
-    draw_center(canvas, 50, line);
+    canvas_draw_str_aligned(canvas, 0, 63, AlignLeft, AlignBottom, ok);
+    canvas_draw_str_aligned(canvas, 127, 63, AlignRight, AlignBottom, back);
 }
 
-static void draw_game_over(Canvas* canvas, const Game* game) {
-    char line[32];
+static void draw_title(Canvas* canvas, const Game* game) {
+    char line[40];
     canvas_set_font(canvas, FontPrimary);
-    draw_center(canvas, 2, "Game over");
+    draw_center(canvas, 2, "FLIPPER DIVER");
+
+    /* Decorative sequence: the Reinforce stratagem. */
+    const Stratagem* reinforce = &stratagems[0];
+    size_t length = stratagem_length(reinforce);
+    int32_t x = 64 - (int32_t)(length * ARROW_PITCH - (ARROW_PITCH - ARROW_SIZE)) / 2;
+    for(size_t i = 0; i < length; i++) {
+        draw_arrow(canvas, x + (int32_t)i * ARROW_PITCH, 16, stratagem_arrow(reinforce, i), true);
+    }
+
     canvas_set_font(canvas, FontSecondary);
     snprintf(
         line,
         sizeof(line),
-        "Score %lu  M%lu",
+        "Record %lu (M%lu)",
+        (unsigned long)game->best_score,
+        (unsigned long)game->best_round);
+    draw_center(canvas, 34, line);
+    draw_hints(canvas, "OK: jouer", "Back: quitter");
+}
+
+static void draw_announce(Canvas* canvas, const Game* game) {
+    char line[16];
+    canvas_set_font(canvas, FontPrimary);
+    draw_center(canvas, 8, "MANCHE");
+    canvas_set_font(canvas, FontBigNumbers);
+    snprintf(line, sizeof(line), "%lu", (unsigned long)game->round);
+    draw_center(canvas, 24, line);
+    canvas_set_font(canvas, FontSecondary);
+    snprintf(line, sizeof(line), "Score %lu", (unsigned long)game->score);
+    canvas_draw_str_aligned(canvas, 64, 63, AlignCenter, AlignBottom, line);
+}
+
+#define ROUND_END_REVEAL_MS 500
+#define ROUND_END_ROW_Y     16
+#define ROUND_END_ROW_STEP  10
+
+static void draw_bonus_row(Canvas* canvas, int32_t row, const char* label, uint32_t value) {
+    char number[16];
+    int32_t y = ROUND_END_ROW_Y + row * ROUND_END_ROW_STEP;
+    snprintf(number, sizeof(number), "+%lu", (unsigned long)value);
+    canvas_draw_str_aligned(canvas, 16, y, AlignLeft, AlignTop, label);
+    canvas_draw_str_aligned(canvas, 112, y, AlignRight, AlignTop, number);
+}
+
+/* Bonuses show one by one, every 500 ms, then the total (REQ-001-12). */
+static void draw_round_end(Canvas* canvas, const Game* game) {
+    char line[40];
+    canvas_set_font(canvas, FontPrimary);
+    snprintf(line, sizeof(line), "MANCHE %lu TERMINEE", (unsigned long)game->round);
+    draw_center(canvas, 2, line);
+
+    uint32_t elapsed = GAME_ROUND_END_MS - game->phase_ms;
+    int32_t shown = (int32_t)(elapsed / ROUND_END_REVEAL_MS) + 1;
+    int32_t row = 0;
+
+    canvas_set_font(canvas, FontSecondary);
+    if(row < shown) draw_bonus_row(canvas, row++, "Bonus de manche", game->round_bonus);
+    if(row < shown) draw_bonus_row(canvas, row++, "Bonus de temps", game->time_bonus);
+    if(game->perfect_bonus && row < shown) {
+        draw_bonus_row(canvas, row++, "Manche parfaite", game->perfect_bonus);
+    }
+    if(row < shown) {
+        canvas_set_font(canvas, FontPrimary);
+        draw_bonus_row(
+            canvas, row, "Total", game->round_bonus + game->time_bonus + game->perfect_bonus);
+    }
+
+    draw_hints(canvas, "OK: suite", "Back: pause");
+}
+
+/* Nothing of the round shows while paused: no reading ahead (REQ-001-16). */
+static void draw_paused(Canvas* canvas, const Game* game) {
+    char line[40];
+    canvas_set_font(canvas, FontPrimary);
+    draw_center(canvas, 8, "PAUSE");
+    canvas_set_font(canvas, FontSecondary);
+    snprintf(
+        line,
+        sizeof(line),
+        "Manche %lu  Score %lu",
+        (unsigned long)game->round,
+        (unsigned long)game->score);
+    draw_center(canvas, 28, line);
+    draw_hints(canvas, "OK: reprendre", "Back: quitter");
+}
+
+static void draw_game_over(Canvas* canvas, const Game* game) {
+    char line[40];
+    canvas_set_font(canvas, FontPrimary);
+    draw_center(canvas, 2, "GAME OVER");
+    canvas_set_font(canvas, FontSecondary);
+    snprintf(
+        line,
+        sizeof(line),
+        "Score %lu  Manche %lu",
         (unsigned long)game->score,
         (unsigned long)game->round);
-    draw_center(canvas, 20, line);
-    snprintf(line, sizeof(line), "Record %lu", (unsigned long)game->best_score);
-    draw_center(canvas, 32, line);
-    draw_center(canvas, 50, "OK: titre  Back: quitter");
+    draw_center(canvas, 16, line);
+    snprintf(
+        line,
+        sizeof(line),
+        "Record %lu (M%lu)",
+        (unsigned long)game->best_score,
+        (unsigned long)game->best_round);
+    draw_center(canvas, 27, line);
+    if(game->new_record) {
+        /* Inverted banner. */
+        canvas_draw_box(canvas, 12, 38, 104, 11);
+        canvas_set_color(canvas, ColorWhite);
+        canvas_set_font(canvas, FontPrimary);
+        draw_center(canvas, 39, "NOUVEAU RECORD !");
+        canvas_set_color(canvas, ColorBlack);
+    }
+    draw_hints(canvas, "OK: titre", "Back: quitter");
 }
 
 void view_draw(Canvas* canvas, const Game* game) {
-    char line[32];
     canvas_clear(canvas);
+    canvas_set_color(canvas, ColorBlack);
 
     switch(game->phase) {
     case GamePhaseTitle:
         draw_title(canvas, game);
         break;
     case GamePhaseAnnounce:
-        canvas_set_font(canvas, FontPrimary);
-        snprintf(line, sizeof(line), "Manche %lu", (unsigned long)game->round);
-        canvas_draw_str_aligned(canvas, 64, 32, AlignCenter, AlignCenter, line);
+        draw_announce(canvas, game);
         break;
     case GamePhasePlaying:
         draw_playing(canvas, game);
@@ -241,11 +318,7 @@ void view_draw(Canvas* canvas, const Game* game) {
         draw_round_end(canvas, game);
         break;
     case GamePhasePaused:
-        canvas_set_font(canvas, FontPrimary);
-        draw_center(canvas, 10, "Pause");
-        canvas_set_font(canvas, FontSecondary);
-        draw_center(canvas, 34, "OK: reprendre");
-        draw_center(canvas, 46, "Back: quitter");
+        draw_paused(canvas, game);
         break;
     case GamePhaseGameOver:
         draw_game_over(canvas, game);

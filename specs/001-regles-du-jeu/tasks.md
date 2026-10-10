@@ -86,6 +86,8 @@ couvrent. « Manuel » = vérifié sur l'appareil avec `launch`.
   révélation des bonus toutes les 500 ms, pause sans contenu de jeu, game over
   avec « Nouveau record ! ». Supprime le rendu texte provisoire. — REQ-001-1, 3,
   12, 16, 19 (affichage) — verify : manuel, chaque critère d'affichage.
+  *Code fait ; mise en page contrôlée sur l'aperçu PC ; vérification sur
+  l'appareil en attente. `Game.new_record` ajouté pour « Nouveau record ! ».*
 - [ ] 14. Pause sur perte de l'écran : `last_draw_tick` dans le callback de rendu,
   `game_pause` si plus de 250 ms sans rendu en phase active. — REQ-001-18 —
   verify : manuel, en ouvrant une session qFlipper en pleine manche. Si la GUI

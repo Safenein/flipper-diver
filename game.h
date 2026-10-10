@@ -66,6 +66,7 @@ typedef struct {
     uint32_t score;
     uint32_t best_score;
     uint32_t best_round;
+    bool new_record; /* the game that just ended beat the record */
 
     uint32_t round; /* 1-based, 0 before the first round */
     uint8_t round_size;
